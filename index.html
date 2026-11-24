@@ -99,6 +99,10 @@ th.colh{cursor:grab}th.colh:hover{background:#e2e2e2}
 .kgrid td.blk:hover{outline:2px solid var(--red);outline-offset:-2px}
 .kgrid td.blk{cursor:grab}.kgrid td.dragging{opacity:.4}
 .kgrid td.dropok{outline:2px dashed var(--red)!important;outline-offset:-2px;background:#fde8e8!important}
+#bugBtn{font-size:11px;padding:3px 8px;margin-right:8px;color:var(--sub);border:1px solid var(--line);border-radius:6px;background:#fff}#bugN{color:var(--red);font-weight:700;margin-left:3px}
+.pasteZone{margin-top:8px;border:2px dashed #c9c9c9;border-radius:8px;padding:10px 12px;font-size:12px;color:#555;display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;background:#fafafa}
+.pasteZone:hover,.pasteZone.on{border-color:var(--red);background:#fff5f5}.pasteZone.drag{border-color:var(--red);background:#fde8e8}
+.pasteZone button{margin-left:auto}
 .dh{display:inline-block;cursor:grab;color:#999;font-size:15px;line-height:1;padding:2px 4px;margin-right:4px;user-select:none;vertical-align:middle}
 .dh:hover{color:var(--red)}
 [data-dnd].dragging{opacity:.35}
@@ -236,7 +240,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.21-20</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.24-21</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -261,6 +265,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
   <button data-t="help"><span class="num">?</span>書き方ルール</button>
   <span style="flex:1"></span>
   <span class="cloudOnly cloudSt" id="cloudSt"></span>
+  <button class="ghost sm" id="bugBtn" onclick="openBug()" title="不具合・気になる点を報告">🐞 不具合を報告<span id="bugN"></span></button>
   <span class="cloudOnly who"><span id="who"></span><button class="ghost sm" id="bOut" hidden onclick="cloudLogout()">ログアウト</button></span>
 </nav>
 <div id="roBar" hidden><b id="roWho"></b>のデータを見ています。変更しても共有には保存されません。<button class="primary sm" onclick="dupMine()">複製して自分のデータにする</button></div>
@@ -380,6 +385,14 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <style id="pvPageStyle"></style>
 
 <div class="toast" id="toast"></div>
+<div class="modal" id="bugModal"><div class="box">
+  <h3>不具合・気になる点を報告</h3>
+  <p class="hint">何をしたら、どうなったか（期待していたこと）を書いて「報告ファイルを保存」を押してください。保存されたファイルとスクリーンショットをClaudeに送れば、原因を調べて直します。</p>
+  <label class="f"><span>どの画面で・何をしたら・どうなったか</span><textarea id="bugText" rows="5" placeholder="例：香盤表タブでブロックをドラッグしたら、別の列に移動してしまった"></textarea></label>
+  <label style="display:flex;gap:6px;align-items:center;font-size:12px;margin:6px 0"><input type="checkbox" id="bugData" checked> いま開いている作業データも添付する（画像は除きます）</label>
+  <div id="bugErrs" class="hint"></div>
+  <div class="acts"><button onclick="closeModal('bugModal')">閉じる</button><button class="primary" onclick="saveBug()">報告ファイルを保存</button></div>
+</div></div>
 <div id="login" hidden><div class="lgp"><img class="appicon big" alt="" src=""><div class="brand" style="font-size:20px">A<b>&amp;</b>L 運営マニュアル Maker</div><p>会社のGoogleアカウント（@alonzo.jp）でログインしてください。</p><button id="bLogin" class="primary">Googleでログイン</button><p class="warn" id="loginMsg"></p></div></div>
 <div class="modal" id="confModal"><div class="box">
   <h3>ほかの人が先に更新しました</h3>
@@ -31464,7 +31477,7 @@ MAX: 9026 };
       const imgs = (b.images || []).filter((x) => x && x.dataUrl);
       if (!imgs.length) return [];
       const totalW = Math.round(CW * Math.min(100, Math.max(10, Number(b.width) || 100)) / 100);
-      const maxH = Math.round(CH * 0.6);
+      const maxH = Math.round(CH * (b.tall ? 0.9 : 0.6));
       if (imgs.length === 1) {
         const p = image(imgs[0], totalW, maxH, b.align === 'left' ? AlignmentType.LEFT : AlignmentType.CENTER);
         return p ? [p, spacer(80)] : [];
@@ -33612,9 +33625,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function colorArg(args) {
     if (!args) return '000000';
     if (typeof args[0] === 'string') return args[0].replace('#', '').toUpperCase();
-    const a = Array.from(args); return hex(a[0], a[1], a[2]);
+    return hex(args[0], args[1], args[2]);
   }
 
+  const blend = (h, a) => { const n = parseInt(h, 16); return hex(((n >> 16) & 255) * a + 255 * (1 - a), ((n >> 8) & 255) * a + 255 * (1 - a), (n & 255) * a + 255 * (1 - a)); };
   async function readPage(pdfjs, page, opt = {}) {
     const vp = page.getViewport({ scale: 1 });
     const W = vp.width, H = vp.height;
@@ -33636,35 +33650,62 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     // ---- 演算子を順にたどる ----
     let ctm = [1, 0, 0, 1, 0, 0];
     const stack = [];
-    let fill = '000000';
-    let path = [];
-    const rects = [], images = [], runs = [];
+    let fill = '000000', stroke = '000000', lw = 1, fa = 1, sa = 1;
+    let path = [], segs = [], pbox = null, curve = false;
+    const rects = [], images = [], runs = [], lines = [], shapes = [];
+    const addPt = (x, y) => { const [px, py] = toTop(x, y); if (!pbox) pbox = { x0: px, y0: py, x1: px, y1: py }; else { pbox.x0 = Math.min(pbox.x0, px); pbox.y0 = Math.min(pbox.y0, py); pbox.x1 = Math.max(pbox.x1, px); pbox.y1 = Math.max(pbox.y1, py); } return [px, py] };
+    const lwScale = () => Math.sqrt(Math.abs(ctm[0] * ctm[3] - ctm[1] * ctm[2])) || 1;
+    const clearPath = () => { path = []; segs = []; pbox = null; curve = false; };
     let Tm = [1, 0, 0, 1, 0, 0], Tlm = [1, 0, 0, 1, 0, 0];
     let fontSize = 10, fontId = null, charSp = 0, wordSp = 0, hScale = 1, leading = 0;
     const fn = ol.fnArray, ar = ol.argsArray;
     for (let i = 0; i < fn.length; i++) {
       const f = fn[i], a = ar[i];
       switch (f) {
-        case O.save: stack.push({ ctm, fill }); break;
-        case O.restore: { const s = stack.pop(); if (s) { ctm = s.ctm; fill = s.fill; } break; }
+        case O.save: stack.push({ ctm, fill, stroke, lw, fa, sa }); break;
+        case O.restore: { const s = stack.pop(); if (s) { ctm = s.ctm; fill = s.fill; stroke = s.stroke; lw = s.lw; fa = s.fa; sa = s.sa; } break; }
+        case O.setGState: { try { (a[0] || []).forEach((kv) => { if (kv[0] === 'ca') fa = Number(kv[1]); if (kv[0] === 'CA') sa = Number(kv[1]); }); } catch (e) { } break; }
+        case O.setStrokeRGBColor: stroke = colorArg(a); break;
+        case O.setStrokeGray: { const g = Array.isArray(a) ? a[0] : 0; stroke = hex(g * 255, g * 255, g * 255); break; }
+        case O.setLineWidth: lw = a[0]; break;
         case O.transform: ctm = mul(ctm, a); break;
         case O.setFillRGBColor: fill = colorArg(a); break;
+        case O.setFillColorN: if (a && a[0] === 'Shading') fill = 'PATTERN'; break;
         case O.setFillGray: { const g = Array.isArray(a) ? a[0] : 0; fill = hex(g * 255, g * 255, g * 255); break; }
         case O.constructPath: {
-          const ops = a[0], co = a[1]; let k = 0;
+          const ops = a[0], co = a[1]; let k = 0; let cur = null, start = null;
           for (const op of ops) {
             if (op === O.rectangle) { const [x, y, w, h] = [co[k], co[k + 1], co[k + 2], co[k + 3]]; k += 4;
               const p1 = apply(ctm, x, y), p2 = apply(ctm, x + w, y + h);
               path.push({ x0: Math.min(p1[0], p2[0]), y0: Math.min(p1[1], p2[1]), x1: Math.max(p1[0], p2[0]), y1: Math.max(p1[1], p2[1]) });
-            } else if (op === O.moveTo || op === O.lineTo) k += 2;
-            else if (op === O.curveTo) k += 6; else if (op === O.curveTo2 || op === O.curveTo3) k += 4;
+              const c = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]].map(([u, v]) => { const q = apply(ctm, u, v); return addPt(q[0], q[1]) });
+              for (let j = 0; j < 4; j++) segs.push([c[j], c[(j + 1) % 4]]);
+            } else if (op === O.moveTo) { const q = apply(ctm, co[k], co[k + 1]); cur = start = addPt(q[0], q[1]); k += 2; }
+            else if (op === O.lineTo) { const q = apply(ctm, co[k], co[k + 1]); const p = addPt(q[0], q[1]); if (cur) segs.push([cur, p]); cur = p; k += 2; }
+            else if (op === O.curveTo) { for (let j = 0; j < 3; j++) { const q = apply(ctm, co[k + j * 2], co[k + j * 2 + 1]); cur = addPt(q[0], q[1]); } curve = true; k += 6; }
+            else if (op === O.curveTo2 || op === O.curveTo3) { for (let j = 0; j < 2; j++) { const q = apply(ctm, co[k + j * 2], co[k + j * 2 + 1]); cur = addPt(q[0], q[1]); } curve = true; k += 4; }
+            else if (op === O.closePath) { if (cur && start) segs.push([cur, start]); cur = start; }
           }
           break;
         }
-        case O.fill: case O.eoFill: case O.fillStroke: case O.eoFillStroke: case O.closeFillStroke: case O.closeEOFillStroke:
-          path.forEach((r) => { const [x0, y0] = toTop(r.x0, r.y1), [x1, y1] = toTop(r.x1, r.y0); rects.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, fill }); });
-          path = []; break;
-        case O.endPath: case O.stroke: case O.closeStroke: path = []; break;
+        case O.fill: case O.eoFill: case O.fillStroke: case O.eoFillStroke: case O.closeFillStroke: case O.closeEOFillStroke: {
+          if (fa < 0.05) { if (f !== O.fill && f !== O.eoFill && sa >= 0.05) segs.forEach(([p, q]) => lines.push({ x0: p[0], y0: p[1], x1: q[0], y1: q[1], w: lw * lwScale(), color: stroke })); clearPath(); break; }
+          if (fill === 'PATTERN') { clearPath(); break; }
+          const fillHex = fill; fill = fa < 0.98 ? blend(fill, fa) : fill;
+          const axis = !curve && segs.length && segs.every(([p, q]) => Math.abs(p[0] - q[0]) < 0.5 || Math.abs(p[1] - q[1]) < 0.5);
+          const onlyRects = path.length && !curve && segs.length === path.length * 4;
+          if (!onlyRects && axis && pbox && segs.length <= 5) { rects.push({ x: pbox.x0, y: pbox.y0, w: pbox.x1 - pbox.x0, h: pbox.y1 - pbox.y0, fill }); }
+          else if (onlyRects) path.forEach((r) => { const [x0, y0] = toTop(r.x0, r.y1), [x1, y1] = toTop(r.x1, r.y0); rects.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, fill }); });
+          else if (pbox) shapes.push({ x: pbox.x0, y: pbox.y0, w: pbox.x1 - pbox.x0, h: pbox.y1 - pbox.y0, fill, curve });
+          if (f !== O.fill && f !== O.eoFill) segs.forEach(([p, q]) => lines.push({ x0: p[0], y0: p[1], x1: q[0], y1: q[1], w: lw * lwScale(), color: stroke }));
+          fill = fillHex; clearPath(); break;
+        }
+        case O.stroke: case O.closeStroke:
+          if (sa < 0.05) { clearPath(); break; }
+          segs.forEach(([p, q]) => lines.push({ x0: p[0], y0: p[1], x1: q[0], y1: q[1], w: lw * lwScale(), color: stroke }));
+          if (curve && pbox) shapes.push({ x: pbox.x0, y: pbox.y0, w: pbox.x1 - pbox.x0, h: pbox.y1 - pbox.y0, fill: null, stroke, curve: true });
+          clearPath(); break;
+        case O.endPath: clearPath(); break;
         case O.paintImageXObject: case O.paintInlineImageXObject: case O.paintImageMaskXObject: {
           const p0 = apply(ctm, 0, 0), p1 = apply(ctm, 1, 1);
           const [x0, y0] = toTop(Math.min(p0[0], p1[0]), Math.max(p0[1], p1[1])), [x1, y1] = toTop(Math.max(p0[0], p1[0]), Math.min(p0[1], p1[1]));
@@ -33722,7 +33763,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         } catch (e) { im.data = null; }
       }
     }
-    return { width: W, height: H, texts, rects, images };
+    return { width: W, height: H, texts, rects, images, lines, shapes };
   }
 
   async function readPdf(pdfjs, bytes, opt = {}) {
@@ -33732,6 +33773,422 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return pages;
   }
   return { readPdf, readPage };
+});
+</script>
+<script>/* PDF の運営マニュアル（PowerPoint・Googleスライド・Word から書き出したもの）を、アプリの形式に変換する
+ * 入力：OMPdf.readPage の結果（texts / rects / lines / images）を全ページ分
+ * 方針：
+ *   1ページ＝1章（「自由ページ（文章・表・画像）」）。ページ上部の見出しを章の名前にする。
+ *   文字は文章として取り出す（太字・赤字・■・・ などはアプリの書き方ルールに変換）。
+ *   罫線で囲まれた表は、アプリの表にする。
+ *   写真・地図・図形（矢印や書き込みを含む）は、その範囲を画像として切り出す（見た目をそのまま残す）。
+ *   表紙は表紙の文字・ロゴに、目次はアプリが自動で作るので取り込まない（章のグループ分けに使う）。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.OMPdfManual = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const W = (rep, level, title, reason, fix) => rep.warnings.push({ level, title, reason, fix });
+  const rgb = (h) => { const n = parseInt(h || '000000', 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const isRed = (h) => { const [r, g, b] = rgb(h); return r > 170 && g < 110 && b < 110; };
+  const isWhite = (h) => { const [r, g, b] = rgb(h); return r > 245 && g > 245 && b > 245; };
+  const isLight = (h) => { const [r, g, b] = rgb(h); return r > 200 && g > 200 && b > 200; };
+  const ov = (a, b, pad = 0) => a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
+  const inside = (p, b, pad = 0) => p.x >= b.x - pad && p.x <= b.x + b.w + pad && p.y >= b.y - pad && p.y <= b.y + b.h + pad;
+  const union = (a, b) => { const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y); return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y }; };
+  const ctr = (t) => ({ x: t.x + t.w / 2, y: t.y + t.h / 2 });
+  const CJK = /[　-鿿＀-￯]/;
+  // 文字の実際の大きさ（PDFによって text.size が当てにならないので幅から推定）
+  function charSize(t) {
+    const s = t.str; let units = 0;
+    for (const ch of s) units += CJK.test(ch) ? 1 : (/[A-Z0-9]/.test(ch) ? 0.62 : 0.52);
+    const est = units > 0 ? t.w / units : t.size;
+    return Math.max(4, Math.min(t.size || est, est || t.size));
+  }
+
+  // ---------- 1ページの解析 ----------
+  function analyzePage(pg, pi) {
+    const Wd = pg.width, Ht = pg.height;
+    const texts = pg.texts.map((t) => ({ ...t, str: t.str.replace(/[\uE000-\uF8FF]/g, '□'), cs: charSize(t) })).filter((t) => t.w > 0);
+    // ヘッダー・フッターの境目：上部／下部の横線
+    const hlines = pg.lines.filter((l) => Math.abs(l.y0 - l.y1) < 0.6 && Math.abs(l.x1 - l.x0) > Wd * 0.35);
+    const top = hlines.filter((l) => l.y0 > Ht * 0.025 && l.y0 < Ht * 0.11).sort((a, b) => b.y0 - a.y0)[0];
+    const bot = hlines.filter((l) => l.y0 > Ht * 0.88).sort((a, b) => a.y0 - b.y0)[0];
+    const hdrY = top ? top.y0 + 1 : Ht * 0.06;
+    const ftrY = bot ? bot.y0 - 1 : Ht * 0.955;
+    const headTexts = texts.filter((t) => t.y + t.h / 2 < hdrY && t.str.trim());
+    const ht = headTexts.filter((t) => t.x < Wd * 0.62).sort((a, b) => a.y - b.y || a.x - b.x);
+    const title = ht.filter((t) => ht.length && Math.abs(t.yb - ht[0].yb) < Math.max(3, ht[0].cs * 1.6) || (ht[0] && t.yb > ht[0].yb && t.yb - ht[0].yb < ht[0].cs * 1.6 && t.x < Wd * 0.4)).map((t) => t.str).join('').replace(/\s+/g, ' ').trim();
+    const headImgs = pg.images.filter((im) => im.y + im.h / 2 < hdrY && im.w > 20);
+    const area = { x: 0, y: hdrY, w: Wd, h: ftrY - hdrY };
+    const inArea = (b) => b.y + b.h / 2 > hdrY && b.y + b.h / 2 < ftrY;
+    const body = texts.filter((t) => inArea(t));
+    const rects = pg.rects.filter((r) => inArea(r) && !(r.w > Wd * 0.8 && r.h > Ht * 0.6) && r.w > 0.2 && r.h > 0.2);
+    const lines = pg.lines.filter((l) => { const b = { x: Math.min(l.x0, l.x1), y: Math.min(l.y0, l.y1), w: Math.abs(l.x1 - l.x0), h: Math.abs(l.y1 - l.y0) }; return inArea(b) && (b.w > 2 || b.h > 2) && !(l.color && isWhite(l.color)); });
+    const images = pg.images.filter((im) => inArea(im) && im.w > 6 && im.h > 6);
+    return { pi, Wd, Ht, title, headImgs, hdrY, ftrY, area, body, rects, lines, images, all: texts };
+  }
+
+  // ---------- 表を見つける ----------
+  function findTables(a) {
+    const E = []; // {o:'h'|'v', p, s, e}
+    const push = (o, p, s, e) => { if (e - s > 4) E.push({ o, p, s: Math.min(s, e), e: Math.max(s, e) }); };
+    a.lines.forEach((l) => { if (Math.abs(l.y0 - l.y1) < 0.8) push('h', (l.y0 + l.y1) / 2, l.x0, l.x1); else if (Math.abs(l.x0 - l.x1) < 0.8) push('v', (l.x0 + l.x1) / 2, l.y0, l.y1); });
+    a.rects.forEach((r) => {
+      if (r.h < 1.6 && r.w > 6) push('h', r.y + r.h / 2, r.x, r.x + r.w);
+      else if (r.w < 1.6 && r.h > 6) push('v', r.x + r.w / 2, r.y, r.y + r.h);
+      else if (r.w > 6 && r.h > 6 && r.w * r.h < a.area.w * a.area.h * 0.5) { push('h', r.y, r.x, r.x + r.w); push('h', r.y + r.h, r.x, r.x + r.w); push('v', r.x, r.y, r.y + r.h); push('v', r.x + r.w, r.y, r.y + r.h); }
+    });
+    // つながっている線のかたまり
+    const par = E.map((_, i) => i); const f = (i) => (par[i] === i ? i : (par[i] = f(par[i])));
+    const H = E.map((e, i) => [e, i]).filter(([e]) => e.o === 'h'), V = E.map((e, i) => [e, i]).filter(([e]) => e.o === 'v');
+    for (const [h, i] of H) for (const [v, j] of V) if (v.p >= h.s - 2 && v.p <= h.e + 2 && h.p >= v.s - 2 && h.p <= v.e + 2) par[f(i)] = f(j);
+    const comps = {}; E.forEach((e, i) => (comps[f(i)] = comps[f(i)] || []).push(e));
+    const tables = [];
+    for (const es of Object.values(comps)) {
+      const uniq = (arr) => { const s = arr.sort((x, y) => x - y); const out = []; s.forEach((v) => { if (!out.length || v - out[out.length - 1] > 2) out.push(v); }); return out; };
+      const vv = es.filter((e) => e.o === 'v');
+      const ys = uniq([...es.filter((e) => e.o === 'h').map((e) => e.p), ...(vv.length ? [Math.min(...vv.map((e) => e.s)), Math.max(...vv.map((e) => e.e))] : [])]), xs = uniq(vv.map((e) => e.p));
+      if (ys.length < 2 || xs.length < 2 || ys.length * xs.length < 6) continue;
+      const box = { x: xs[0], y: ys[0], w: xs[xs.length - 1] - xs[0], h: ys[ys.length - 1] - ys[0] };
+      if (box.w < 60 || box.h < 20) continue;
+      const tin = a.body.filter((t) => t.str.trim() && inside(ctr(t), box, 1));
+      if (tin.length < 3) continue;
+      // 行ごとの列の区切り（その行の高さにかかる縦線だけを使う → 結合セルに対応）
+      const vs = es.filter((e) => e.o === 'v');
+      const rows = [];
+      for (let r = 0; r < ys.length - 1; r++) {
+        const y0 = ys[r], y1 = ys[r + 1], mid = (y0 + y1) / 2; if (y1 - y0 < 3) continue;
+        let bx = uniq([xs[0], xs[xs.length - 1], ...vs.filter((v) => v.s <= mid && v.e >= mid).map((v) => v.p)]);
+        if (bx.length === 2 && xs.length > 2) { const rowT = tin.filter((t) => ctr(t).y > y0 && ctr(t).y < y1); const xsT = rowT.map((t) => ctr(t).x); const cols = new Set(xsT.map((x) => xs.findIndex((v, k) => x >= v && x < xs[k + 1]))); if (cols.size > 1) bx = xs.slice(); }
+        const cells = [];
+        for (let c = 0; c < bx.length - 1; c++) {
+          const cb = { x: bx[c], y: y0, w: bx[c + 1] - bx[c], h: y1 - y0 };
+          if (cb.w < 2) continue;
+          const ct = tin.filter((t) => inside(ctr(t), cb, 0.5));
+          const fill = a.rects.filter((rr) => rr.w > 4 && rr.h > 4 && inside(ctr(cb), rr) && rr.w < box.w * 1.01).map((rr) => rr.fill).pop() || null;
+          const c0 = xs.findIndex((x) => Math.abs(x - bx[c]) <= 2), c1 = xs.findIndex((x) => Math.abs(x - bx[c + 1]) <= 2);
+          cells.push({ box: cb, texts: ct, fill, c0, span: Math.max(1, c1 - c0) });
+        }
+        rows.push({ y0, y1, cells });
+      }
+      const filled = rows.reduce((n, r) => n + r.cells.filter((c) => c.texts.length).length, 0);
+      if (filled < 3) continue;
+      const total = rows.reduce((n, r) => n + r.cells.length, 0);
+      const regular = rows.filter((r) => r.cells.length === xs.length - 1).length;
+      tables.push({ box, xs, ys, rows, texts: tin, nRows: rows.length, nCols: xs.length - 1, sparse: filled / Math.max(1, total) < 0.4 || regular < rows.length * 0.5 });
+    }
+    return tables;
+  }
+
+  // ---------- 文字 → 行 → アプリの書き方 ----------
+  function toLines(ts) {
+    const items = ts.filter((t) => t.str && t.str.trim()).sort((p, q) => p.yb - q.yb || p.x - q.x);
+    const lines = [];
+    for (const t of items) {
+      const L = lines.find((l) => Math.abs(l.yb - t.yb) < Math.max(1.5, Math.min(l.cs, t.cs) * 0.45));
+      if (L) { L.items.push(t); L.cs = Math.max(L.cs, t.cs); } else lines.push({ yb: t.yb, cs: t.cs, items: [t] });
+    }
+    lines.forEach((l) => {
+      l.items.sort((p, q) => p.x - q.x);
+      l.x = l.items[0].x; l.x1 = Math.max(...l.items.map((t) => t.x + t.w)); l.y = Math.min(...l.items.map((t) => t.y)); l.h = Math.max(...l.items.map((t) => t.h));
+    });
+    return lines.sort((p, q) => p.yb - q.yb || p.x - q.x);
+  }
+  function lineText(l) {
+    let s = '', lastEnd = null, run = null, runs = [];
+    l.items.forEach((t) => {
+      let str = t.str;
+      if (lastEnd != null) { const gap = t.x - lastEnd; if (gap > t.cs * 2.2) str = '　'.repeat(Math.min(4, Math.max(1, Math.round(gap / (t.cs * 2.5))))) + str.replace(/^\s+/, ''); else if (gap > t.cs * 0.6 && !/\s$/.test(s) && !/^\s/.test(str)) str = ' ' + str; }
+      lastEnd = t.x + t.w;
+      const st = (isRed(t.color) ? 'r' : '') + (t.bold ? 'b' : '');
+      if (run && run.st === st) run.s += str; else { run = { st, s: str }; runs.push(run); }
+      s += str;
+    });
+    const plain = runs.map((r) => r.s).join('');
+    const allRed = runs.filter((r) => r.s.trim()).every((r) => r.st.includes('r'));
+    const allBold = runs.filter((r) => r.s.trim()).every((r) => r.st.includes('b'));
+    let md;
+    if (allRed && plain.trim()) md = '!' + plain.trim();
+    else md = runs.map((r) => { const v = r.s; if (!v.trim()) return v; if (r.st.includes('r')) return '!!' + v.trim() + '!!'; if (r.st.includes('b') && !allBold) return '**' + v.trim() + '**'; return v; }).join('');
+    if (allBold && !allRed && plain.trim() && !/^[■【◆]/.test(plain.trim())) md = '**' + md.trim() + '**';
+    if (l.items.every((t) => t.hl) && plain.trim() && plain.length < 40 && !/^■/.test(plain.trim())) md = '■ ' + plain.trim();
+    return { md: md.replace(/\s+$/, ''), plain: plain.trim() };
+  }
+  const BULLET = /^[■□・•●◆◇▶▷※①-⑳★☆【\-–―>〇○◎]|^[0-9０-９]{1,2}[\.．)）]|^STEP|^〜|^～/;
+  // 行を段落にまとめる（PowerPointの折り返しで分かれた行はつなげる）
+  function linesToBody(lines, colRight) {
+    const out = []; let prev = null;
+    for (const l of lines) {
+      const { md, plain } = lineText(l);
+      if (!plain) continue;
+      if (prev) {
+        const gap = l.y - (prev.y + prev.h);
+        const wrapped = prev.x1 > colRight - prev.cs * 2.2 && !BULLET.test(plain) && Math.abs(l.cs - prev.cs) < 1.2 && gap < prev.h * 0.9 && l.x <= prev.x + prev.cs * 2.5 && !/[。：:]$/.test(prev.plain);
+        if (wrapped && !md.startsWith('!') && !prev.md.startsWith('!')) { out[out.length - 1] = (out[out.length - 1] + md.replace(/^\s+/, '')).replace(/\*\*\*\*|!!!!/g, ''); prev = { ...l, md, plain, x: prev.x }; continue; }
+        if (gap > Math.max(prev.h, l.h) * 1.15) out.push('');
+      }
+      const ind = prev && l.x > (out.__x0 ?? l.x) + l.cs * 1.5 && !BULLET.test(plain) ? '　' : '';
+      if (out.__x0 == null) out.__x0 = l.x;
+      out.push(ind + md);
+      prev = { ...l, md, plain };
+    }
+    return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  // 2段組み（左右に分かれた文章）なら左→右の順にする（文字のかたまり単位で判定）
+  function splitColumns(items, area) {
+    const its = items.filter((t) => t.str && t.str.trim());
+    if (its.length < 12) return [its];
+    const x0 = area.x + area.w * 0.3, x1 = area.x + area.w * 0.7;
+    let best = null;
+    for (let cut = x0; cut <= x1; cut += 3) {
+      const cross = its.filter((t) => t.x < cut - 1 && t.x + t.w > cut + 1).length;
+      if (cross > 1) continue;
+      const L = its.filter((t) => t.x + t.w / 2 < cut), R = its.filter((t) => t.x + t.w / 2 >= cut);
+      if (L.length < 6 || R.length < 6) continue;
+      const span = (a) => Math.max(...a.map((t) => t.y)) - Math.min(...a.map((t) => t.y));
+      const yr = Math.max(span(its), 1);
+      if (span(L) < yr * 0.4 || span(R) < yr * 0.4) continue;
+      // 左右の文字が同じ高さに並んでいる（＝2段組み）
+      const shared = L.filter((t) => R.some((u) => Math.abs(u.yb - t.yb) < 2)).length;
+      if (shared < 3) continue;
+      const gap = Math.min(...R.map((t) => t.x)) - Math.max(...L.map((t) => t.x + t.w));
+      if (!best || gap > best.gap) best = { cut, gap, L, R };
+    }
+    return best ? [best.L, best.R] : [its];
+  }
+
+  // 罫線のない表（文字の並びだけで列がそろっているもの）
+  function textTable(lines) {
+    if (lines.length < 5) return null;
+    const fields = lines.map((l) => { const f = []; let cur = null; l.items.forEach((t) => { if (cur && t.x - (cur.x1) < t.cs * 1.2) { cur.s += t.str; cur.x1 = t.x + t.w; cur.items.push(t); } else { cur = { x: t.x, x1: t.x + t.w, s: t.str, items: [t] }; f.push(cur); } }); return f; });
+    const multi = fields.filter((f) => f.length >= 3).length;
+    if (multi < lines.length * 0.6) return null;
+    const xs = []; fields.flat().forEach((f) => { const c = xs.find((v) => Math.abs(v.x - f.x) < 8); if (c) { c.n++; c.x = (c.x * (c.n - 1) + f.x) / c.n; } else xs.push({ x: f.x, n: 1 }); });
+    const cols = xs.filter((c) => c.n >= Math.max(2, lines.length * 0.25)).map((c) => c.x).sort((p, q) => p - q);
+    if (cols.length < 3 || cols.length > 10) return null;
+    const rows = fields.map((f) => { const r = Array(cols.length).fill(''); f.forEach((fd) => { let k = 0; cols.forEach((x, i) => { if (fd.x >= x - 8) k = i; }); r[k] = (r[k] ? r[k] + ' ' : '') + fd.s.trim(); }); return r; });
+    const head = rows[0];
+    const ws = cols.map((x, i) => (cols[i + 1] || Math.max(...lines.map((l) => l.x1))) - x);
+    const tw = ws.reduce((p, q) => p + q, 0);
+    return { type: 'table', columns: head.map((h, i) => ({ name: h, w: Math.max(0.3, Math.round(ws[i] / tw * 100) / 10) })), rows: rows.slice(1), header: true };
+  }
+
+  // ---------- ページ → 章 ----------
+  async function pageToSection(a, crop, rep) {
+    const blocks = []; // {y, block}
+    const used = new Set();
+    // 表
+    const tables = findTables(a);
+    const bigSchedule = /スケジュール|タイムテーブル|香盤|タイムライン/.test(a.title);
+    for (const tb of tables) {
+      const colored = tb.rows.flatMap((r) => r.cells).filter((c) => c.fill && !isLight(c.fill)).length;
+      const asImage = tb.sparse || tb.nCols > 9 || tb.nRows > 45 || (bigSchedule && tb.nRows > 12) || colored > tb.nCols * 2;
+      tb.texts.forEach((t) => used.add(t));
+      if (asImage) { tb.asImage = true; continue; }
+      const cellText = (c) => { const ls = toLines(c.texts); return ls.map((l) => lineText(l).md.trim()).join('\n'); };
+      const first = tb.rows[0];
+      const headLike = first && first.cells.length && first.cells.every((c) => (c.fill && !isWhite(c.fill)) || c.texts.every((t) => t.bold));
+      const grid = tb.rows.map((r) => { const row = Array(tb.nCols).fill(''); r.cells.forEach((c) => { if (c.c0 >= 0 && c.c0 < tb.nCols) row[c.c0] = (row[c.c0] ? row[c.c0] + '\n' : '') + cellText(c); }); return row; });
+      // 何も入らない列は外す
+      const keep = Array.from({ length: tb.nCols }, (_, i) => grid.some((r) => r[i].trim()));
+      const ws = tb.xs.slice(1).map((x, i) => x - tb.xs[i]);
+      const cols = keep.map((k, i) => (k ? { name: headLike ? grid[0][i].replace(/\n/g, ' ').replace(/\*\*|!!/g, '').replace(/^!/, '') : '', w: Math.max(0.3, Math.round(ws[i] / tb.box.w * 100) / 10) } : null)).filter(Boolean);
+      const rows = (headLike ? grid.slice(1) : grid).map((r) => r.filter((_, i) => keep[i])).filter((r) => r.some((v) => v.trim()));
+      blocks.push({ y: tb.box.y, x: tb.box.x, box: tb.box, block: { type: 'table', columns: cols, rows, header: !!headLike } });
+      rep.tables++;
+    }
+    // 画像として切り出す範囲（写真・図形・矢印・書き込み）
+    const tblBoxes = tables.filter((t) => !t.asImage).map((t) => t.box);
+    const inTable = (b) => tblBoxes.some((tb) => inside(ctr(b), tb, 2));
+    const textBoxes = a.body.filter((t) => t.str.trim());
+    const hl = [];
+    const isHighlight = (r) => textBoxes.some((t) => inside(ctr(t), r, 1) && r.h <= t.h * 2.6 && r.h < 40) && !a.images.some((im) => ov(im, r));
+    const G = [];
+    a.images.forEach((im) => { if (!inTable(im)) G.push({ ...im, kind: 'img' }); });
+    tables.filter((t) => t.asImage).forEach((t) => G.push({ ...t.box, kind: 'tbl' }));
+    const boxRects = [];
+    a.rects.forEach((r) => {
+      if (inTable(r) || isWhite(r.fill) && !(r.w > 30 && r.h > 30)) return;
+      if (r.h < 1.6 || r.w < 1.6) { if (r.w > a.Wd * 0.5 || r.h > a.Ht * 0.5) return; G.push({ ...r, kind: 'line' }); return; }
+      if (isHighlight(r)) { if (!isWhite(r.fill) && !isLight(r.fill) || /^(F|E)[0-9A-F]{5}$/.test(r.fill) && !isWhite(r.fill)) textBoxes.forEach((t) => { if (inside(ctr(t), r, 1)) t.hl = true; }); return; }
+      boxRects.push(r); G.push({ ...r, kind: 'rect' });
+    });
+    a.lines.forEach((l) => {
+      const b = { x: Math.min(l.x0, l.x1), y: Math.min(l.y0, l.y1), w: Math.max(0.5, Math.abs(l.x1 - l.x0)), h: Math.max(0.5, Math.abs(l.y1 - l.y0)) };
+      if (inTable(b)) return;
+      if (b.w > a.Wd * 0.6 && b.h < 1) return; // 区切り線
+      const horiz = b.h < 1, vert = b.w < 1;
+      if (horiz && textBoxes.some((t) => Math.abs(b.y - (t.y + t.h)) < 4 && b.x <= t.x + 4 && b.x + b.w >= t.x + t.w - 4)) return; // 下線
+      G.push({ ...b, kind: horiz || vert ? 'line' : 'diag' });
+    });
+    // 近いもの同士をまとめる
+    let groups = G.map((g) => ({ box: { x: g.x, y: g.y, w: g.w, h: g.h }, items: [g] }));
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let i = 0; i < groups.length && !changed; i++) for (let j = i + 1; j < groups.length; j++) {
+        if (ov(groups[i].box, groups[j].box, 5)) { groups[i] = { box: union(groups[i].box, groups[j].box), items: groups[i].items.concat(groups[j].items) }; groups.splice(j, 1); changed = true; break; }
+      }
+    }
+    // 枠だけ（文字を囲む四角）は「赤枠ボックス」の文章にする。小さな飾りは無視
+    const boxed = [];
+    groups = groups.filter((g) => {
+      const hasImg = g.items.some((i) => i.kind === 'img' || i.kind === 'tbl' || i.kind === 'diag');
+      const tin = textBoxes.filter((t) => !used.has(t) && inside(ctr(t), g.box, 1));
+      if (!hasImg && g.box.w < 24 && g.box.h < 24) return false;
+      if (!hasImg) {
+        const outline = g.items.every((i) => i.kind === 'line' || i.kind === 'rect');
+        const frame = g.items.filter((i) => i.kind === 'rect' && i.w > g.box.w * 0.9 && i.h > g.box.h * 0.9).length || (g.items.filter((i) => i.kind === 'line').length <= 8);
+        const textCover = tin.reduce((s, t) => s + t.w * t.h, 0) / Math.max(1, g.box.w * g.box.h);
+        if (outline && frame && tin.length >= 2 && g.items.filter((i) => i.kind === 'rect').length <= 3 && (textCover > 0.06 || tin.length >= 4)) { boxed.push({ box: g.box, texts: tin }); return false; }
+        if (outline && !tin.length && g.items.length <= 3) return false; // 枠だけ・線だけ
+      }
+      return true;
+    });
+    // 切り出し範囲にかかる文字はその範囲に含める（地図の書き込みなど）
+    for (const g of groups) {
+      let grew = true;
+      while (grew) {
+        grew = false;
+        for (const t of textBoxes) { if (used.has(t)) continue; if (ov(t, g.box, 1)) { const nb = union(g.box, t); if (nb.w !== g.box.w || nb.h !== g.box.h || nb.x !== g.box.x || nb.y !== g.box.y) { g.box = nb; grew = true; } used.add(t); } }
+      }
+    }
+    // 重なった範囲をもう一度まとめる
+    changed = true;
+    while (changed) { changed = false; for (let i = 0; i < groups.length && !changed; i++) for (let j = i + 1; j < groups.length; j++) if (ov(groups[i].box, groups[j].box, 2)) { groups[i] = { box: union(groups[i].box, groups[j].box), items: groups[i].items.concat(groups[j].items) }; groups.splice(j, 1); changed = true; break; } }
+    // 図の中にある小さな表（組織図の箱など）は図に含める
+    for (let k = blocks.length - 1; k >= 0; k--) {
+      const bb = blocks[k]; if (!bb.box) continue;
+      const g = groups.find((gg) => { const ix = Math.max(0, Math.min(gg.box.x + gg.box.w, bb.box.x + bb.box.w) - Math.max(gg.box.x, bb.box.x)), iy = Math.max(0, Math.min(gg.box.y + gg.box.h, bb.box.y + bb.box.h) - Math.max(gg.box.y, bb.box.y)); return ix * iy > bb.box.w * bb.box.h * 0.6; });
+      if (g) { blocks.splice(k, 1); rep.tables--; }
+    }
+    for (const g of groups) {
+      const b = { x: Math.max(0, g.box.x - 3), y: Math.max(a.hdrY, g.box.y - 3), w: g.box.w + 6, h: g.box.h + 6 };
+      b.w = Math.min(b.w, a.Wd - b.x); b.h = Math.min(b.h, a.ftrY - b.y);
+      const img = await crop(a.pi, b);
+      if (img) { rep.images++; blocks.push({ y: b.y, x: b.x, block: { type: 'image', images: [img], width: Math.max(15, Math.min(100, Math.round(b.w / (a.Wd - 50) * 100))), align: b.x < a.Wd * 0.3 && b.w < a.Wd * 0.6 ? 'left' : undefined, tall: true } }); }
+      textBoxes.forEach((t) => { if (inside(ctr(t), g.box, 1)) used.add(t); });
+    }
+    // 枠付きの文章
+    for (const bx of boxed) {
+      bx.texts.forEach((t) => used.add(t));
+      const ls = toLines(bx.texts); if (!ls.length) continue;
+      const tt = textTable(ls); if (tt) { blocks.push({ y: bx.box.y, x: bx.box.x, block: tt }); rep.tables++; continue; }
+      const first = lineText(ls[0]);
+      const titleLike = ls.length > 1 && (ls[0].items.every((t) => t.bold || isRed(t.color)) || /^[【\[]/.test(first.plain));
+      const bodyText = linesToBody(titleLike ? ls.slice(1) : ls, bx.box.x + bx.box.w - 4);
+      blocks.push({ y: bx.box.y, x: bx.box.x, block: { type: 'text', body: `[[${titleLike ? first.plain.replace(/^!/, '') : ''}\n${bodyText}\n]]` } });
+    }
+    // 残りの文章
+    const rest = textBoxes.filter((t) => !used.has(t));
+    const cols = splitColumns(rest, a.area).map((c) => toLines(c));
+    const ys = blocks.map((b) => b.y).sort((p, q) => p - q);
+    for (const colLines of cols) {
+      const right = Math.max(...colLines.map((l) => l.x1));
+      // 表・画像の位置で文章を区切る（順番を保つ）
+      let chunk = [], chunkY = null;
+      const flush = () => { if (chunk.length) { const body = linesToBody(chunk, right); if (body) blocks.push({ y: chunkY, x: chunk[0].x, block: { type: 'text', body } }); } chunk = []; chunkY = null; };
+      colLines.forEach((l) => {
+        if (chunk.length && ys.some((y) => y > chunk[chunk.length - 1].y && y < l.y)) flush();
+        if (chunkY == null) chunkY = l.y; chunk.push(l);
+      });
+      flush();
+      if (cols.length > 1) blocks.forEach((b) => { if (b.block.type === 'text' && b.col == null) b.col = cols.indexOf(colLines); });
+    }
+    blocks.sort((p, q) => (cols.length > 1 && p.col != null && q.col != null && p.col !== q.col ? p.col - q.col : 0) || p.y - q.y || p.x - q.x);
+    return blocks.map((b) => b.block);
+  }
+
+  // ---------- 目次 → 章のグループ ----------
+  function readToc(a) {
+    const ls = splitColumns(a.body, a.area).flatMap((c) => toLines(c)).map((l) => lineText(l).plain);
+    const map = {}; let grp = '';
+    const re = /(?:^|\n)\s*[0-9０-９]{1,2}[\.．、]\s*([^\n…]{2,24}?)\s*(?=\n|$)|P\.?\s*(\d{1,3})(?:\s*[〜~～\-]\s*(\d{1,3}))?/g;
+    const txt = ls.join('\n'); let m;
+    while ((m = re.exec(txt))) {
+      if (m[1]) grp = m[1].replace(/[…\.\s]+$/, '').trim();
+      else { const p0 = Number(m[2]), p1 = Number(m[3] || m[2]); for (let p = p0; p <= p1 && p - p0 < 10; p++) map[p] = grp; }
+    }
+    return map;
+  }
+
+  // ---------- 本体 ----------
+  async function build(pages, env) {
+    const rep = { pages: 0, tables: 0, images: 0, skipped: 0, warnings: [], fonts: [] };
+    const A = pages.map((p, i) => analyzePage(p, i));
+    // 表紙：1ページ目にヘッダー線がなく「マニュアル」等の大きな文字がある
+    let cover = null, startAt = 0;
+    const p0 = A[0];
+    const p0txt = p0 ? p0.all.map((t) => t.str).join('') : '';
+    if (p0 && p0.all.filter((t) => t.str.trim()).length < 45 && (/マニュアル|manual|台本|御中|CONFIDENTIAL/i.test(p0txt) || !p0.title)) {
+      cover = p0; startAt = 1;
+    }
+    // 目次
+    let toc = {};
+    const sections = [];
+    // ページ番号の対応（フッターの数字）
+    const pageNo = (a) => { const t = a.all.filter((x) => x.y > a.ftrY - 2 && /^\d{1,3}$/.test(x.str.trim())); return t.length ? Number(t[0].str.trim()) : null; };
+    for (let i = startAt; i < A.length; i++) {
+      const a = A[i];
+      if (/^目次|^もくじ|^INDEX$|^CONTENTS$/i.test(a.title || '') || (!a.title && /目次/.test(a.body.slice(0, 3).map((t) => t.str).join('')))) { toc = { ...toc, ...readToc(a) }; rep.skipped++; continue; }
+      const blocks = await pageToSection(a, env.crop, rep);
+      const hasContent = blocks.some((b) => b.type !== 'text' || b.body.trim());
+      const ttl = a.title || (blocks.find((b) => b.type === 'text') || { body: '' }).body.split('\n')[0].replace(/[*!■【】\[\]]/g, '').slice(0, 30) || `ページ${i + 1}`;
+      // メモページ（タイトルがメモで中身が空）
+      if (/^メモ$|^MEMO$/i.test(ttl) && !hasContent) { sections.push({ id: uid(), kind: 'memo', group: '', title: 'メモ', enabled: true, pages: 1, data: {}, _no: pageNo(a) }); continue; }
+      if (!hasContent) blocks.push({ type: 'text', body: '' });
+      sections.push({ id: uid(), kind: 'blocks', group: '', title: ttl, enabled: true, pages: 'auto', data: { blocks }, _no: pageNo(a) ?? i });
+    }
+    // グループ（目次があればそれに従う。なければ「本編」）
+    let last = 'はじめに';
+    sections.forEach((s) => { const g = toc[s._no]; if (g) last = g; s.group = Object.keys(toc).length ? last : (s.kind === 'memo' ? 'その他' : '運営マニュアル'); delete s._no; });
+    rep.pages = sections.length;
+
+    // 表紙・ロゴ
+    let coverLogo = null, coverTitle = '運営マニュアル', coverLines = [], dateStr = '';
+    if (cover) {
+      const ts = cover.all.filter((t) => t.str.trim() && !/^(confidential|name)$/i.test(t.str.trim()));
+      const ls = toLines(ts).map((l) => lineText(l).plain).filter((s) => s && !/^(confidential|name)$/i.test(s));
+      const ti = ls.findIndex((s) => /マニュアル|manual/i.test(s));
+      if (ti >= 0) coverTitle = ls[ti];
+      dateStr = ls.find((s) => /^\d{4}[.\/年]\d{1,2}/.test(s)) || '';
+      coverLines = ls.filter((s, i) => i !== ti && s !== dateStr && !/^ver/i.test(s)).slice(0, 3);
+      const big = cover.images.concat(cover.headImgs).sort((p, q) => q.w * q.h - p.w * p.h)[0];
+      if (big && big.w > 60) coverLogo = await env.crop(0, { x: big.x, y: big.y, w: big.w, h: big.h });
+    }
+    let headerLogo = null;
+    const hp = A.find((a, i) => i >= startAt && a.headImgs.some((im) => im.x > a.Wd * 0.45));
+    if (hp) { const im = hp.headImgs.filter((m) => m.x > hp.Wd * 0.45).sort((p, q) => q.w * q.h - p.w * p.h)[0]; headerLogo = await env.crop(hp.pi, { x: im.x, y: im.y, w: im.w, h: im.h }); }
+
+    // 注意点
+    W(rep, 'warn', '写真・地図・図形は、その範囲を画像として取り込みました', 'PDFの図形（矢印・書き込み・色付きの枠など）はアプリで編集できる部品に戻せないため、見た目を保つために画像にしています。', '地図の書き込みを直したい場合は、元のファイルで修正した図をスクリーンショットして、該当ページに貼り付けてください（⌘V で貼り付けできます）。');
+    if (rep.tables) W(rep, 'info', `表 ${rep.tables} 個は、アプリの表に変換しました`, '罫線の位置から行と列を組み立てています。結合されたセルは左上のセルに文字を入れています。', '「マニュアル構成」で表の内容を確認してください。');
+    W(rep, 'info', 'スケジュール（香盤表）のページは画像として取り込みました', 'PDFの香盤表は図として描かれていて、時間とブロックの情報を確実に読み取れないため。', '香盤表を編集したい場合は、「香盤表」タブの「既存の香盤表を読込」で元のExcel・Wordを読み込むか、アプリで作り直してください。');
+    if (Object.keys(toc).length) W(rep, 'info', '目次のページは取り込まず、章の分け方に使いました', 'アプリが目次を自動で作るため。', '');
+    W(rep, 'info', '文章の改行・段落は、PDFの文字の位置から推定しています', 'PDFには「どこまでが1つの段落か」という情報がないため、行の長さと間隔から判断しています。', '気になる箇所は「マニュアル構成」で直してください。');
+
+    const fileName = env.fileName || '';
+    let nameFromText = '';
+    for (const s of sections.slice(0, 4)) for (const b of (s.data.blocks || [])) if (b.type === 'text' && !nameFromText) { const m = /(?:^|\n)\s*[■◆●・]?\s*【?(?:名称|イベント名|イベントタイトル|案件名|催事名)】?\s*[：:　 ]+\s*([^\n]+)/.exec(b.body.replace(/\*\*|!!/g, '').replace(/【[^】\n]*】/g, (x) => x.replace(/[\s　]/g, ''))); if (m) nameFromText = m[1].replace(/^[　\s]+/, '').trim(); }
+    const evName = fileName.replace(/\.(pptx\.)?pdf$/i, '').replace(/^v\d+_/, '').replace(/^\d{6,8}[_\-\s]*/, '').replace(/^\d{2}/, '').replace(/【[^】]*】[_\s]*/g, '').replace(/[_\-\s]*(fix|final|最終|修正)\d*$/i, '').replace(/^[_\s]+|[_\s]+$/g, '') || coverLines[0] || 'イベント';
+    const eventName = nameFromText || evName;
+    const project = {
+      version: 1,
+      fonts: env.fonts || { ja: '游ゴシック', en: 'same', size: 9 },
+      info: {
+        eventName, headerText: '', coverTitle, coverLines, docDate: dateStr, version: '',
+        overview: [], vars: [{ key: '運営統括', value: '' }, { key: '運営統括TEL', value: '' }, { key: '制作担当', value: '' }, { key: '制作担当TEL', value: '' }, { key: '事務局', value: '' }, { key: '事務局TEL', value: '' }],
+        importedFrom: fileName, originalFonts: [],
+      },
+      images: { coverLogo, headerLogo },
+      schedule: { start: '08:00', end: '20:00', step: 30, days: [], orientation: 'landscape' },
+      sections,
+    };
+    return { project, report: rep };
+  }
+  return { build, analyzePage, findTables, toLines, lineText, splitColumns, readToc };
 });
 </script>
 <script type="text/plain" id="pdfWorkerSrc">/**
@@ -34006,7 +34463,7 @@ async function load(){DB=await idb();try{const s=(await idbGet(LS_KEY))||localSt
 async function init(){
   {const ic=$('#appIcon').href;$('#appTouch').href=ic;$$('img.appicon').forEach(i=>i.src=ic)}
   P=await load();
-  $$('#tabs button').forEach(b=>b.onclick=()=>{TAB=b.dataset.t;localStorage.setItem(LS_TAB,TAB);render()});
+  $$('#tabs button[data-t]').forEach(b=>b.onclick=()=>{TAB=b.dataset.t;localStorage.setItem(LS_TAB,TAB);render()});
   $('#newTpl').innerHTML=Object.entries(OMTpl.TEMPLATES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
   if(CLOUD)initCloud();
   if(!P){P=ensureMeta(OMTpl.newProject('full','generic'));save();render();undoCommit();if(!CLOUD)openFontModal();return}
@@ -34025,7 +34482,7 @@ async function createNew(){
   P=ensureMeta(OMTpl.newProject(v,$('#newVenue').value));SEL=null;DAY=0;save();closeModal('newModal');TAB='info';render();openFontModal()}
 
 function render(){
-  $$('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===TAB));
+  $$('#tabs button[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===TAB));
   const f=P.fonts;
   $('#fontBadge').innerHTML=`書体：<b>${esc(f.ja)}</b>${f.en&&f.en!=='same'?' ／ '+esc(f.en):''}　${f.size}pt`;
   ({lib:renderLib,info:renderInfo,sched:renderSched,manual:renderManual,help:renderHelp})[TAB]();
@@ -34363,7 +34820,8 @@ function renderSecEd(){
   else if(s.kind==='table')h+=tableEditor(d);
   else if(s.kind==='image')h+=`<div class="card"><h2>画像の上の文章（任意）</h2>${textField('before',d.before)}</div>
     <div class="card"><h2>画像（図面・地図など。ページ幅に合わせて自動縮小）</h2><div class="imgs">${(d.images||[]).map((im,k)=>imgTile(im,'simg',k,'',`curSec().data.images`)).join('')}</div>
-      <input type="file" accept="image/*" multiple onchange="addImgs(this)" style="margin-top:8px"><p class="hint">PDFの図面は、PNG/JPGに書き出してから追加してください。複数枚入れると縦に並びます。</p></div>
+      <div class="pasteZone" data-paste="sec"><b>スクリーンショットを貼り付け：</b>この枠をクリックして ⌘V（WindowsはCtrl+V）／画像ファイルをここにドラッグ<button class="sm" onclick="event.stopPropagation();pasteFromClipboard('sec')">クリップボードから貼り付け</button></div>
+      <input type="file" accept="image/*" multiple onchange="addImgs(this)" style="margin-top:8px"><p class="hint">複数枚入れると縦に並びます。</p></div>
     <div class="card"><h2>画像の下の文章（任意）</h2>${textField('after',d.after)}</div>`;
   else if(s.kind==='schedule')h+=`<div class="card"><h2>スケジュール（香盤表）</h2><p>「香盤表」タブの内容が、日程ごとに1ページずつ入ります（現在 <b>${P.schedule.days.length}</b> 日分）。</p>
     <p class="hint">ヘッダーは「スケジュール／日程タイトル」、表の下に【本日のポイント】の赤枠が入ります。</p><button onclick="TAB='sched';render()">香盤表を編集する →</button></div>`;
@@ -34414,7 +34872,7 @@ const BLK_LABEL={text:'文章',table:'表',image:'画像',schedule:'香盤表'};
 function blocksEditor(d){
   const bl=d.blocks||(d.blocks=[]);
   const days=P.schedule.days;
-  let h=`<p class="hint" style="margin:0 0 10px">文章・表・画像・香盤表を上から順に並べたページです。各ブロックは左上の ⠿ をドラッグするか、右上のボタンで並べ替え・削除できます。</p>`;
+  let h=`<p class="hint" style="margin:0 0 10px">文章・表・画像・香盤表を上から順に並べたページです。各ブロックは左上の ⠿ をドラッグするか、右上のボタンで並べ替え・削除できます。スクリーンショットは、ブロックをクリックしてから ⌘V で、その下に画像として入ります。</p>`;
   bl.forEach((b,bi)=>{
     h+=`<div class="card" data-dnd="mblk" data-i="${bi}"><h2><span class="dh" draggable="true" title="ドラッグで並べ替え">⠿</span>${BLK_LABEL[b.type]||b.type}<span style="flex:1"></span>
       <button class="ghost sm" onclick="blkMv(${bi},-1)">↑</button><button class="ghost sm" onclick="blkMv(${bi},1)">↓</button><button class="ghost sm" onclick="blkDel(${bi})">削除</button></h2>`;
@@ -34422,7 +34880,8 @@ function blocksEditor(d){
     else if(b.type==='table')h+=tableEditor(b,bi);
     else if(b.type==='image')h+=`<div class="imgs">${(b.images||[]).map((im,k)=>imgTile(im,'bimg',k,bi,`curSec().data.blocks[${bi}].images`)).join('')}</div>
       <div class="row" style="margin-top:8px;align-items:center"><label class="f" style="flex:0 0 220px"><span>横幅（本文幅に対する％）</span><input type="number" min="10" max="100" step="5" value="${b.width||100}" oninput="curSec().data.blocks[${bi}].width=Number(this.value)||100;save()"></label>
-      <div class="hint">複数枚あると横に並びます。<br><input type="file" accept="image/*" multiple onchange="blkAddImgs(${bi},this)"></div></div>`;
+      <div class="hint">複数枚あると横に並びます。<br><input type="file" accept="image/*" multiple onchange="blkAddImgs(${bi},this)"></div></div>
+      <div class="pasteZone" data-paste="blk" data-bi="${bi}"><b>スクリーンショットを貼り付け：</b>この枠をクリックして ⌘V／画像ファイルをここにドラッグ<button class="sm" onclick="event.stopPropagation();pasteFromClipboard('blk',${bi})">クリップボードから貼り付け</button></div>`;
     else if(b.type==='schedule')h+=`<label class="f"><span>入れる日程</span><select onchange="curSec().data.blocks[${bi}].dayId=this.value;save()">${days.map(x=>`<option value="${x.id}" ${x.id===b.dayId?'selected':''}>${esc(x.title)}</option>`).join('')}</select></label>
       <p class="hint">この位置に香盤表が1ページで入ります。内容は「香盤表」タブで編集します。</p><button class="sm" onclick="DAY=Math.max(0,P.schedule.days.findIndex(x=>x.id==='${b.dayId}'));TAB='sched';render()">香盤表を編集する →</button>`;
     h+=`</div>`;
@@ -34560,6 +35019,7 @@ async function importDocxFile(inp){
   const fp=fileProblem(f.name,'manual');if(fp){showProblem('impModal','#impBody','#impActs',fp);return}
   if(typeof DecompressionStream==='undefined'){showProblem('impModal','#impBody','#impActs',['このブラウザでは読み込めません','ファイルの展開に必要な機能（DecompressionStream）がないブラウザのため。','Chrome・Edge・Safari の最新版でアプリを開いてください。']);return}
   $('#impBody').innerHTML='<p>読み込み中です…（画像が多いと数十秒かかります）</p>';$('#impActs').innerHTML='';openModal('impModal');
+  if(/\.pdf$/i.test(f.name))return importManualPdf(f);
   try{
     const buf=new Uint8Array(await f.arrayBuffer());
     const {project,report}=await OMImport.importDocx(buf,{parseXML:(x)=>new DOMParser().parseFromString(x,'application/xml'),inflate:inflateRaw,processImage:procImage,fileName:f.name,fonts:{...P.fonts}});
@@ -34577,6 +35037,47 @@ async function importDocxFile(inp){
     $('#impActs').innerHTML=`<button onclick="closeModal('impModal')">キャンセル</button><button class="primary" onclick="applyImport()">読み込んだ内容で開く</button>`;
   }catch(e){console.error(e);showProblem('impModal','#impBody','#impActs',readError(e,f.name))}
 }
+// ---------- PDFの運営マニュアルを読み込む ----------
+async function importManualPdf(f){
+  const st=(t)=>{$('#impBody').innerHTML=`<p>${t}</p>`};
+  try{
+    pdfInit();
+    const bytes=new Uint8Array(await f.arrayBuffer());
+    const doc=await pdfjsLib.getDocument({data:bytes,disableFontFace:true,isEvalSupported:false,useSystemFonts:false}).promise;
+    const pages=[];
+    for(let i=1;i<=doc.numPages;i++){st(`PDFを読み込んでいます…（${i}／${doc.numPages}ページ）`);pages.push(await OMPdf.readPage(pdfjsLib,await doc.getPage(i),{}))}
+    if(!pages.some(p=>p.texts.some(t=>t.str.trim())))throw Object.assign(new Error('文字がありません'),{code:'scan'});
+    let cache={pi:-1};
+    async function render(pi){
+      if(cache.pi===pi)return cache;
+      const p=await doc.getPage(pi+1);const sc=2.4;const vp=p.getViewport({scale:sc});
+      const c=document.createElement('canvas');c.width=Math.ceil(vp.width);c.height=Math.ceil(vp.height);
+      const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);
+      await p.render({canvasContext:g,viewport:vp}).promise;cache={pi,c,sc};return cache;
+    }
+    const crop=async(pi,b)=>{
+      st(`図・写真を切り出しています…（${pi+1}／${pages.length}ページ）`);
+      const {c,sc}=await render(pi);const w=Math.max(1,Math.round(b.w*sc)),hh=Math.max(1,Math.round(b.h*sc));
+      const o=document.createElement('canvas');o.width=w;o.height=hh;o.getContext('2d').drawImage(c,Math.round(b.x*sc),Math.round(b.y*sc),w,hh,0,0,w,hh);
+      const dataUrl=w*hh>350000?o.toDataURL('image/jpeg',0.88):o.toDataURL('image/png');
+      return{dataUrl,w,h:hh};
+    };
+    const {project,report}=await OMPdfManual.build(pages,{crop,fileName:f.name,fonts:{...P.fonts}});
+    IMP=project;
+    const ws=report.warnings||[];
+    $('#impBody').innerHTML=warnHtml(ws)+`<p><b>${esc(f.name)}</b> を読み込みました。</p>
+      <table class="help"><tr><td>ページ（章）</td><td><b>${report.pages}</b>（元のPDF ${pages.length}ページ${report.skipped?'・目次などを除く':''}）</td></tr><tr><td>表</td><td>${report.tables}</td></tr><tr><td>図・写真（画像として切り出し）</td><td>${report.images}</td></tr>
+      <tr><td>イベント名</td><td>${esc(project.info.eventName)}</td></tr></table>
+      <p class="hint" style="margin-top:10px">PDFの1ページを1つのページ（章）として、文章・表・画像を上から順に並べています。目次がある場合は、目次の章分けをそのまま使っています。<br>
+      このあと書体を選びます。現在の作業内容は置き換わるので、必要なら先に「作業データを保存」してください。</p>`;
+    $('#impActs').innerHTML=`<button onclick="closeModal('impModal')">キャンセル</button><button class="primary" onclick="applyImport()">読み込んだ内容で開く</button>`;
+  }catch(e){
+    console.error(e);
+    if(e.code==='scan')showProblem('impModal','#impBody','#impActs',['このPDFからは文字を読み取れません','紙をスキャンしたPDFや、文字を画像にして書き出したPDFには、文字のデータが入っていないため。','元のPowerPoint・Wordから「PDFとして保存」し直したPDFを読み込むか、元のファイル（.docx）を読み込んでください。']);
+    else if(/password/i.test(e.name||e.message))showProblem('impModal','#impBody','#impActs',['パスワード付きのPDFは読み込めません','PDFに閲覧用のパスワードが設定されているため、中身を取り出せません。','パスワードを外して保存し直したPDFを読み込んでください。']);
+    else showProblem('impModal','#impBody','#impActs',readError(e,f.name));
+  }
+}
 // ---------- 読み込みの注意（アラート） ----------
 const LVL={error:'取り込めません',warn:'要確認',info:'参考'};
 function warnHtml(ws,head){
@@ -34589,7 +35090,7 @@ function warnHtml(ws,head){
 // ファイルの形式そのものが読めない場合の説明
 function fileProblem(name,ctx){
   const ext=(String(name).split('.').pop()||'').toLowerCase();
-  const ok=ctx==='manual'?['docx']:['xlsx','xlsm','docx','pdf'];
+  const ok=ctx==='manual'?['docx','pdf']:['xlsx','xlsm','docx','pdf'];
   if(ok.includes(ext))return null;
   const M={
     xls:['古い形式のExcel（.xls）は読み込めません','.xls は Excel 97-2003 の古い保存形式で、新しい形式（.xlsx）と中身の構造がまったく異なるため、このアプリでは解析できません。','Excelでファイルを開き、「ファイル → 名前を付けて保存」で「Excel ブック（*.xlsx）」を選んで保存し直してから読み込んでください。'],
@@ -34685,6 +35186,7 @@ function listEditor(d){
   const restW=cols.reduce((a,c,i)=>i===0||fixW[i]?a:a+wt(c,i),0)||1;
   const tblW=Math.max(900,(($('#main')||{}).clientWidth||1340)-72);
   const fixedSum=kindW+timeW+62+Object.values(fixW).reduce((a,b)=>a+b,0);
+  h+=`<p class="hint" style="margin:0 0 6px">絵コンテ・写真は、行をクリックしてから ⌘V（WindowsはCtrl+V）でスクリーンショットを貼り付けるか、画像ファイルを行にドラッグしても入ります（CUT列に入ります）。</p>`;
   h+=`<table class="lrows" style="table-layout:fixed"><colgroup><col style="width:${kindW}px"><col style="width:${timeW}px">${cols.map((c,i)=>i===0?'':fixW[i]?`<col style="width:${fixW[i]}px">`:`<col style="width:${Math.max(60,Math.round((tblW-fixedSum)*wt(c,i)/restW))}px">`).join('')}<col style="width:62px"></colgroup>`;
   h+=`<tr><th>種類</th>${cols.map((c,i)=>`<th class="colh" draggable="true" data-dnd="lcol" data-i="${i}" data-axis="x" title="ドラッグで列を入れ替え"><span class="hdh">⠿</span>${esc(c.name)}</th>`).join('')}<th></th></tr>`;
   d.rows.forEach((r,ri)=>{
@@ -34947,6 +35449,102 @@ function pickDays(action){
   openModal('dayPick');
 }
 
+
+
+// =========================================================
+// 不具合の記録と報告（デバッグ用）
+// =========================================================
+const BUGLOG=[];
+function bugPush(kind,msg,stack){BUGLOG.push({at:new Date().toISOString(),kind,msg:String(msg||'').slice(0,500),stack:String(stack||'').slice(0,1500),tab:typeof TAB!=='undefined'?TAB:''});if(BUGLOG.length>50)BUGLOG.shift();const n=$('#bugN');if(n)n.textContent=BUGLOG.length?'（'+BUGLOG.length+'）':''}
+window.addEventListener('error',e=>bugPush('error',e.message,e.error&&e.error.stack));
+window.addEventListener('unhandledrejection',e=>bugPush('promise',e.reason&&e.reason.message||e.reason,e.reason&&e.reason.stack));
+{const ce=console.error;console.error=function(...a){try{bugPush('console',a.map(x=>x&&x.message||String(x)).join(' '),a.find(x=>x&&x.stack)&&a.find(x=>x&&x.stack).stack)}catch(e){}return ce.apply(console,a)}}
+function openBug(){$('#bugErrs').innerHTML=BUGLOG.length?`記録されたエラー：<b>${BUGLOG.length}件</b>（報告ファイルに入ります）<br>最新：${esc(BUGLOG[BUGLOG.length-1].msg.slice(0,120))}`:'記録されたエラーはありません。';openModal('bugModal');setTimeout(()=>$('#bugText').focus(),50)}
+function saveBug(){
+  const ver=(document.querySelector('.brand small, .ver')||{}).textContent||'';
+  const vm=/ver [\d.\-]+/.exec(document.body.innerText)||[''];
+  const rep={app:'A&L 運営マニュアル Maker',version:vm[0],at:new Date().toISOString(),url:location.href.replace(/[?#].*$/,''),mode:typeof CLOUD!=='undefined'&&CLOUD?'共有（URL）':'ファイル',user:typeof me!=='undefined'&&me?me.email:'',browser:navigator.userAgent,screen:innerWidth+'x'+innerHeight,tab:TAB,section:SEL,day:DAY,
+    text:$('#bugText').value,errors:BUGLOG,
+    project:$('#bugData').checked?JSON.parse(JSON.stringify(P,(k,v)=>k==='dataUrl'&&typeof v==='string'?'[画像 '+Math.round(v.length/1024)+'KB]':v)):null};
+  download(new Blob([JSON.stringify(rep,null,1)],{type:'application/json'}),'不具合報告_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')+'.json');
+  closeModal('bugModal');toast('報告ファイルを保存しました。スクリーンショットと一緒にClaudeへ送ってください');
+}
+// =========================================================
+// 画像の貼り付け（⌘V）・ドラッグで追加
+//  どこに入れるか：最後にクリックした場所（画像の枠／ブロック／香盤表の行）で判断
+// =========================================================
+let PASTE_AT=null;
+document.addEventListener('mousedown',e=>{
+  const z=e.target.closest&&e.target.closest('.pasteZone');
+  $$('.pasteZone.on').forEach(x=>x.classList.remove('on'));
+  if(z){z.classList.add('on');PASTE_AT={kind:z.dataset.paste,bi:z.dataset.bi!=null?+z.dataset.bi:null,sec:SEL};return}
+  const blk=e.target.closest&&e.target.closest('[data-dnd="mblk"]');
+  if(blk){PASTE_AT={kind:'blkAfter',bi:+blk.dataset.i,sec:SEL};return}
+  const row=e.target.closest&&e.target.closest('tr[data-dnd="lrow"]');
+  if(row){PASTE_AT={kind:'lrow',ri:+row.dataset.i,day:DAY};return}
+  if(e.target.closest&&e.target.closest('#main'))PASTE_AT=null;
+},true);
+function clipImages(dt){const out=[];if(!dt)return out;for(const it of dt.items||[]){if(it.kind==='file'&&/^image\//.test(it.type)){const f=it.getAsFile();if(f)out.push(f)}}if(!out.length)for(const f of dt.files||[])if(/^image\//.test(f.type))out.push(f);return out}
+async function putImages(files,at){
+  if(!files.length)return false;
+  const imgs=[];for(const f of files){try{imgs.push(await readImage(f))}catch(e){toast('画像を読み込めませんでした')}}
+  if(!imgs.length)return true;
+  at=at||PASTE_AT;
+  if(TAB==='sched'){
+    const d=P.schedule.days[DAY];
+    if(d&&d.type==='list'){
+      if(!at||at.kind!=='lrow'){toast('画像を入れたい行をクリックしてから ⌘V を押してください');return true}
+      const r=d.rows[at.ri];if(!r){return true}r.image=imgs[0];save();renderSched();toast('この行に画像を貼り付けました（CUT列に入ります）');return true;
+    }
+    toast('マス目の香盤表には画像を入れられません');return true;
+  }
+  if(TAB==='manual'){
+    const s=curSec();if(!s){toast('画像を入れるページを左の一覧から選んでください');return true}
+    if(s.kind==='image'){s.data.images=s.data.images||[];s.data.images.push(...imgs);save();renderSecEd();toast('画像を貼り付けました');return true}
+    if(s.kind==='blocks'){
+      const bl=s.data.blocks=s.data.blocks||[];
+      if(at&&at.kind==='blk'&&bl[at.bi]&&bl[at.bi].type==='image'){bl[at.bi].images=bl[at.bi].images||[];bl[at.bi].images.push(...imgs)}
+      else if(at&&at.kind==='blkAfter'&&bl[at.bi]&&bl[at.bi].type==='image'){bl[at.bi].images=bl[at.bi].images||[];bl[at.bi].images.push(...imgs)}
+      else{const pos=at&&at.kind==='blkAfter'&&at.sec===SEL?at.bi+1:bl.length;bl.splice(pos,0,{type:'image',images:imgs,width:100});}
+      save();renderSecEd();toast('画像を貼り付けました');return true;
+    }
+    toast('このページの種類には画像を入れられません。「自由ページ（文章・表・画像）」か「画像」のページで貼り付けてください');return true;
+  }
+  if(TAB==='info'){toast('ロゴは「表紙ロゴ」「ヘッダーロゴ」のファイル選択から入れてください');return true}
+  toast('画像は「マニュアル構成」のページか、リスト型の香盤表の行に貼り付けられます');return true;
+}
+document.addEventListener('paste',async e=>{
+  const files=clipImages(e.clipboardData);if(!files.length)return;
+  const a=document.activeElement;const typing=a&&(a.tagName==='TEXTAREA'||a.tagName==='INPUT');
+  const hasText=[...(e.clipboardData.items||[])].some(it=>it.kind==='string'&&it.type==='text/plain');
+  if(typing&&hasText)return; // 文字のコピーは文字として貼る
+  e.preventDefault();
+  let at=PASTE_AT;
+  if(typing){const blk=a.closest('[data-dnd="mblk"]');if(blk)at={kind:'blkAfter',bi:+blk.dataset.i,sec:SEL};const row=a.closest('tr[data-dnd="lrow"]');if(row)at={kind:'lrow',ri:+row.dataset.i}}
+  await putImages(files,at);
+});
+async function pasteFromClipboard(kind,bi){
+  PASTE_AT={kind,bi:bi!=null?bi:null,sec:SEL};
+  try{
+    const items=await navigator.clipboard.read();const files=[];
+    for(const it of items){const t=it.types.find(x=>/^image\//.test(x));if(t){const b=await it.getType(t);files.push(new File([b],'clip.png',{type:t}))}}
+    if(!files.length){toast('クリップボードに画像がありません。スクリーンショットをコピーしてから押してください（Macは ⌘＋Control＋Shift＋4 でコピーできます）');return}
+    await putImages(files,PASTE_AT);
+  }catch(e){toast('このブラウザではボタンから読み込めません。枠をクリックしてから ⌘V（Ctrl+V）を押してください')}
+}
+// 画像ファイルをページ上にドラッグして追加
+document.addEventListener('dragover',e=>{if(DRAG)return;if([...(e.dataTransfer.types||[])].includes('Files')){e.preventDefault();const z=e.target.closest&&e.target.closest('.pasteZone');$$('.pasteZone.drag').forEach(x=>x!==z&&x.classList.remove('drag'));if(z)z.classList.add('drag')}});
+document.addEventListener('dragleave',e=>{const z=e.target.closest&&e.target.closest('.pasteZone');if(z)z.classList.remove('drag')});
+document.addEventListener('drop',async e=>{
+  if(DRAG)return;const files=clipImages(e.dataTransfer);if(!files.length)return;
+  if(e.target.closest&&e.target.closest('input[type=file]'))return;
+  e.preventDefault();$$('.pasteZone.drag').forEach(x=>x.classList.remove('drag'));
+  const z=e.target.closest&&e.target.closest('.pasteZone');
+  let at=PASTE_AT;
+  if(z)at={kind:z.dataset.paste,bi:z.dataset.bi!=null?+z.dataset.bi:null,sec:SEL};
+  else{const blk=e.target.closest('[data-dnd="mblk"]');if(blk)at={kind:'blkAfter',bi:+blk.dataset.i,sec:SEL};const row=e.target.closest('tr[data-dnd="lrow"]');if(row)at={kind:'lrow',ri:+row.dataset.i}}
+  await putImages(files,at);
+});
 // =========================================================
 // ドラッグ＆ドロップで並べ替え
 // =========================================================
