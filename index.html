@@ -100,6 +100,15 @@ th.colh{cursor:grab}th.colh:hover{background:#e2e2e2}
 .kgrid td.blk{cursor:grab}.kgrid td.dragging{opacity:.4}
 .kgrid td.dropok{outline:2px dashed var(--red)!important;outline-offset:-2px;background:#fde8e8!important}
 #bugBtn{font-size:11px;padding:3px 8px;margin-right:8px;color:var(--sub);border:1px solid var(--line);border-radius:6px;background:#fff}#bugN{color:var(--red);font-weight:700;margin-left:3px}
+.slotTile{width:220px;cursor:pointer}.slotBox{height:130px;border:2px dashed #b5b5b5;border-radius:8px;background:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;padding:8px;font-size:12px;color:#555}
+.slotBox b{background:#FFF200;padding:1px 4px;border-radius:3px}.slotBox small{color:#888;font-size:10.5px;line-height:1.5}
+.slotTile.on .slotBox,.slotTile.drag .slotBox,.slotTile:hover .slotBox{border-color:var(--red);background:#fff5f5}
+.slotCap{font-size:10.5px;color:#666;margin-top:2px}
+.todo{border:1px solid #e9d36a;background:#fffbe6}.todo h2{color:#7a5b00}
+.todo .tr{display:grid;grid-template-columns:minmax(160px,1fr) 2fr auto;gap:8px;align-items:center;margin:4px 0}
+.todo .tr .lb{font-size:12px;background:#FFF200;padding:3px 6px;border-radius:4px;justify-self:start}
+.todo .tr input{font-size:12.5px}
+.secitem .td{font-size:9.5px;background:#FFF200;color:#5a4500;border-radius:8px;padding:0 6px;margin-left:4px;white-space:nowrap}
 .pasteZone{margin-top:8px;border:2px dashed #c9c9c9;border-radius:8px;padding:10px 12px;font-size:12px;color:#555;display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;background:#fafafa}
 .pasteZone:hover,.pasteZone.on{border-color:var(--red);background:#fff5f5}.pasteZone.drag{border-color:var(--red);background:#fde8e8}
 .pasteZone button{margin-left:auto}
@@ -240,7 +249,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.24-21</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.25-23</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -30814,6 +30823,220 @@ MAX: 9026 };
 ■ 報告ルール
 ・すべてのトラブルは「発生時刻・場所・内容・対応・結果」を記録して運営統括へ報告します。
 ・閉場後の振り返りで全体共有し、翌日の運用に反映します。`,
+
+    // ===== 標準フォーマット（過去マニュアル14本の共通構成から作成。〔 〕は要入力、{{ }}は基本情報から自動で入ります） =====
+    stdOverviewNotes:
+`■ イベント内容
+・〔イベント内容1（例：ステージイベント／トークショー）〕
+・〔イベント内容2（例：物販・展示コーナー）〕
+・〔イベント内容3〕
+
+■ 参加・入場方法
+・〔入場方法（例：事前抽選による当選者のみ入場可／入場無料）〕
+・〔入場人数・定員（例：当選者〇〇名）〕
+※応募多数の場合は抽選により当選者を決定しています。
+
+■ 全スタッフが必ず守ること
+!会場内ではスマートフォンなどで写真・動画の撮影、およびイベント内容に関するSNS投稿は禁止です。
+!わからないことは推測で答えず、必ずAD／運営統括に確認する。`,
+
+    stdVenue:
+`■ 会場
+{{会場名}}
+〒{{会場住所}}
+
+■ アクセス
+・〔最寄り駅1（例：JR「秋葉原駅」電気街口）〕徒歩〔〇〕分
+・〔最寄り駅2（例：つくばエクスプレス「秋葉原駅」A3出口）〕徒歩〔〇〕分
+・〔最寄り駅3〕徒歩〔〇〕分
+
+■ スタッフの来場
+・駐車場の用意はございません。公共交通機関をご利用ください。
+・到着したら、{{運営統括}}（{{運営統括TEL}}）に連絡してください。`,
+
+    stdOrgAfter:
+`■ 指示系統
+・現場の最終判断は運営統括（{{運営統括}}）が行います。
+・各エリアのスタッフはエリア担当ADの指示で動き、判断に迷うことはADを通して運営統括へ確認してください。
+・トランシーバーの系統は「スタッフリスト／トランシーバー系統」を参照してください。`,
+
+    stdLoadin:
+`■ 搬入・施工
+・日時：〔搬入日時（例：1月15日（金）18:00〜22:00）〕
+・搬入口：〔搬入口（例：建物裏手 搬入口／荷捌き場）〕
+・搬入車両：〔車両台数・サイズ（例：2t車1台）〕
+
+■ 搬出・撤去
+・日時：〔搬出日時（例：1月16日（土）18:00〜21:00）〕
+・搬出口：〔搬出口〕
+
+■ 搬入・搬出時の注意
+・搬入時は必ず2名以上で作業を行うこと。
+・会場の養生ルールを守り、壁・床・扉を傷つけないよう注意する。
+・現場では会場スタッフ・警備員の指示に従ってください。
+・駐車場の用意はございません。荷下ろし後は速やかに車両を移動させてください。
+!路上における違法駐車は厳禁です。委託先の各業者の方々にも徹底周知をお願いします。`,
+
+    stdLayout:
+`■ エリア構成
+① 〔エリア名（例：受付）〕：〔役割・場所の説明〕
+② 〔エリア名（例：待機列）〕：〔役割・場所の説明〕
+③ 〔エリア名（例：ステージ・客席）〕：〔役割・場所の説明〕
+④ 〔エリア名（例：物販・展示）〕：〔役割・場所の説明〕
+
+※非常口・消火器の位置を開場前に必ず確認してください。`,
+
+    stdBackyard:
+`■ 控室
+・出演者控室：〔場所〕
+・スタッフ控室：〔場所〕
+・荷物置き場：〔場所〕
+
+■ 控室利用の注意
+・控室には関係者以外を入れないこと。出演者控室への出入りは担当者のみとします。
+・貴重品は各自で管理してください。紛失しても責任を負いかねます。
+・食事・休憩は指定の場所のみで取ってください。`,
+
+    stdReception:
+`■ 業務時間：〔受付時間（例：12:30〜14:00）〕
+■ 業務内容：
+・受付ST：来場者の確認（当選メール・リストとの照合）と配布物のお渡し。
+・誘導ST：案内サインを持ち、受付待機列の整理と受付場所の案内。
+■ 担当者：〔担当者名〕
+
+■ 受付フロー
+① お客様ご来場：〔確認する内容（例：当選メール・身分証）〕を確認
+② リストと照合：受付リストで〔照合する項目（例：当選番号・氏名）〕を確認し、チェックを入れる
+③ 配布物のお渡し：〔配布物（例：入場リストバンド・パンフレット）〕
+④ 会場内へご案内
+
+■ 受付での注意
+・プレス・関係者が来場された場合は、関係者受付へご案内し、{{運営統括}}に取り次いでください。
+・リストにない方が来場された場合は、その場で判断せず運営統括へ確認してください。
+!※受付リストは個人情報のため、マニュアルには入れず別紙で管理します。紛失・持ち出し厳禁。`,
+
+    stdGuide:
+`■ 業務時間：〔誘導時間（例：12:00〜18:00）〕
+■ 業務内容：各ポジションで来場者の誘導と導線の確保を行う。
+
+■ 開場前の誘導
+・ご来場のお客様にお声がけし、受付待機列へご案内する。
+「〔イベント名〕にご来場の方は、こちらにお並びください。」
+・通行人が滞留しないよう誘導し、導線を確保する。
+「こちらでは立ち止まれません。恐れ入りますが、立ち止まらないようお願いいたします。」
+
+■ 開場後の誘導
+・待機列は〔列を作る場所〕で折り返して作る。「最後尾」サインを必ず持つ。
+・列が規定の場所からはみ出しそうな場合は、すぐにADへ報告する。
+
+■ 混雑時の段階対応（判断はAD、レベル3以上は運営統括）
+レベル1（通常）：通常運用。
+レベル2（混雑）：列整理を強化し、待ち時間サインを掲出。
+レベル3（過密）：最後尾を締め、以降の来場者には次回の案内を行う。
+レベル4（危険）：入場を一時停止し、運営統括→会場担当者へ連絡。`,
+
+    stdStage:
+`■ 進行の基本
+・進行の合図は〔進行ディレクター名〕から出します。トランシーバーの〔系統〕を常に聞ける状態にしてください。
+・本番中のステージ周辺への立ち入りは、担当スタッフのみとします。
+・機材トラブルは技術担当へ。自分で配線を触らないこと。`,
+
+    stdRules:
+`■ 徹底事項10箇条
+① 業務時間中は、自身が{{主催}}様のイメージに結びつくことを十分に理解する
+② 時間厳守（集合・業務開始時間等）
+③ 清潔感を心がけた身だしなみ（髪・爪・服装・アクセサリー・香水）
+④ 私語厳禁（仕事中、休憩場所への行き帰りも含む）
+⑤ 常に誰かに見られている緊張感を持って仕事に取り組む
+⑥ 仕事中は常に笑顔で元気よく、積極的に声を出す
+⑦ 不明点は必ずスタッフに確認する　※お客様に間違った情報を伝えない
+⑧ 機敏な行動を心がける（お客様対応中や業務指示を受けた際）
+⑨ 言葉づかいに気をつけ、丁寧にお客様に接する
+⑩ 現場のコミュニケーションを円滑に図り、現場の雰囲気は全スタッフで作る
+
+■ スタッフ留意事項
+１、施設案内等 必要情報の把握
+・トイレ／喫煙所／導線などのお客様の問い合わせに対応できるよう、事前に確認しておく事。
+２、交通
+・関係者・スタッフは電車等の公共交通機関を利用する事。
+３、食事・休憩
+・配置を離れる場合は、必ず責任者に了承を得てください。
+・食事・休憩は指定の場所のみ利用可能です。指定された場所以外には立ち入らない事。
+・貴重品は各自保管です。万が一紛失しても責任を負いかねますので十分に注意する事。
+４、関係者トイレ
+・極力バックヤードのトイレを利用し、やむを得ずお客様と同じトイレを利用する場合は、スタッフパスを外して利用して下さい。
+５、事故・怪我の発見
+・速やかに責任者に報告し、その後指示を仰ぐ（緊急時対応に準ずる）。
+６、事前業務
+・担当以外の業務も含め、当マニュアルをよく読み、問い合わせに対応できるよう準備しておく事。
+７、携帯電話
+・必要以外の携帯電話の使用は原則禁止。本番中は必ずマナーモードに設定しておく事。
+８、撮影・SNS
+!会場内での撮影、イベント内容に関するSNS投稿はいかなる理由があっても禁止です。
+
+■ 服装・身だしなみ
+・運営スタッフ：〔服装（例：スタッフT（貸与）／黒無地パンツ／華美でないスニーカー）〕
+・ディレクター：〔服装（例：ジャケット着用、襟付きの服）〕
+・破れたジーンズ・ジャージ・サンダルは不可。キャラクターものの服・アクセサリーは着用しない。
+・髪は清潔に。肩より長い髪は束ねる。不自然な染髪・派手なネイル・香水は控える。
+・スタッフパスは会期終了まで必ず身につけてください。`,
+
+    stdEmergency:
+`■ 基本方針
+○ 来場者の安全確保を第一に考慮・対応すると同時に、各担当責任者への連絡・報告を厳守する。
+○ 連絡指示系統に基づいた迅速な対応を行う。
+○ 開場準備時に、全スタッフは非常口・消火器・消火栓・AEDの所在を確認しておく。
+○ 来場者を誘導する際は、落ち着いて速やかに行う。
+
+■ ケガ人・急病人が出たら
+① 大きな声で周囲のスタッフを呼ぶ（1人で抱え込まない）
+② 運営統括（{{運営統括}} {{運営統括TEL}}）へ連絡
+③ 会場担当者（{{事務局}} {{事務局TEL}}）へ連絡
+④ 現場の安全確保（人だかりを作らない／導線を確保する／写真を撮らせない）
+・意識がない／呼吸がおかしい場合は、ただちに救急車（119）を要請し、AEDを手配する。
+・救護室：〔救護室の場所（なければ「控室で対応」）〕
+
+■ クレーム対応
+・その場で反論しない。まず「申し訳ございません」と受け止め、速やかにADへ引き継ぐ。
+・必ず2名以上で対応する。不当要求に該当する場合は、ただちに運営統括へ報告する。
+
+■ 落とし物・迷子
+・拾得物は〔届け先（例：受付）〕で管理し、拾得した時間と場所を記録する。
+・迷子は複数名で対応し、その場を離れさせずADへ連絡する。
+
+■ 報告
+・すべての事故・トラブルは「発生時刻・場所・内容・対応・結果」を記録し、運営統括へ報告する。`,
+
+    stdDisaster:
+`■ イベント中断のタイミング
+・緊急地震速報が発報された場合、または体感で地震の発生が確認された場合、進行ディレクターはただちにイベントを中断し、その旨を来場者に案内する。
+・来場者には「落ち着いていただくこと」を最優先する。
+
+■ 初期行動（進行ディレクター・運営統括）
+・照明器具など吊り物の下や、倒れる可能性のある物の近くにいる方には、安全な場所への移動をアナウンスする。
+・慌てて会場の外に出ないよう注意する。
+・会場担当者と、火災の有無と避難ルートを迅速に協議する。
+
+[[【地震発生時のアナウンス例】
+「只今、大きな地震を感じました。ご来場のお客様は、バッグなどで頭を保護し、その場にしゃがんでください。
+慌てて出口に向かわず、係員の指示に従ってください。安全が確認でき次第、ご案内いたします。」
+]]
+
+■ 対応の方針（主催者・会場と協議して決定）
+Ａ：小規模で火災もなく緊急性がない場合 → イベントを再開する
+Ｂ：火災はないが、会場の指示により中止する場合 → 避難誘導を行う
+Ｃ：火災が発生している場合 → 緊急避難を行う
+
+[[【再開時のアナウンス例】
+「只今〇〇にて地震が発生いたしました。主催者と協議したところ、本日のイベントには影響なしとの判断にて、このまま続行いたします。どうぞお席にお戻りください。」
+]]
+
+■ 避難誘導（Ｂ・Ｃ）
+・会場出入口に近いブロックから順に誘導する。非常口：〔非常口の場所〕
+・スタッフは列の先頭と最後尾に必ず付き、将棋倒しにならないよう声掛けをする。
+・煙が出ている場合は、ハンカチなどで口と鼻をふさぎ、低い姿勢で避難するよう指示する。
+・避難後はエリアごとに点呼し、ADが人数を運営統括へ報告する（スタッフリストを点呼名簿として使用）。
+・会場内にお客様が残っていないか、必ず確認すること。`,
   };
 
   // ---------- セクション生成 ----------
@@ -30860,6 +31083,61 @@ MAX: 9026 };
       emergency: () => S('text', 'ルール・リスク管理', '緊急時対応（ケガ・急病・災害）', { body: TXT.emergency }),
       trouble: () => S('text', 'ルール・リスク管理', 'トラブル対応', { body: TXT.trouble }),
       memo: () => S('memo', 'ルール・リスク管理', 'メモ', {}),
+      // ---- 標準フォーマット ----
+      stdOverview: () => S('overview', 'はじめに', '実施概要', { body: TXT.stdOverviewNotes }),
+      stdVenue: () => S('blocks', 'はじめに', '会場情報・アクセス', { blocks: [
+        { type: 'text', body: TXT.stdVenue },
+        { type: 'image', images: [{ slot: '会場外観・会場写真', w: 16, h: 10 }, { slot: 'アクセスマップ', w: 16, h: 10 }], width: 100 }] }, { pages: 'auto' }),
+      stdOrg: () => S('blocks', '体制・連絡', '運営体制図', { blocks: [
+        { type: 'image', images: [{ slot: '運営体制図（指揮系統）', w: 16, h: 13 }], width: 100, tall: true },
+        { type: 'text', body: TXT.stdOrgAfter }] }, { pages: 'auto' }),
+      stdStaff: () => S('table', '体制・連絡', 'スタッフリスト／トランシーバー系統', tbl(
+        [['NO.', 0.8, 'center'], ['役割／ポジション', 2.5, 'left'], ['所属（敬称略）', 2, 'left'], ['氏名（敬称略）', 2.5, 'left'], ['系統1', 0.9, 'center'], ['系統2', 0.9, 'center'], ['系統3', 0.9, 'center']],
+        [['1', '主催', '{{主催}}', '', '', '', ''], ['2', '運営統括（D）', 'A&L', '{{運営統括}}', '〇', '〇', '〇'], ['3', '制作', 'A&L', '{{制作担当}}', '〇', '', ''], ['4', '進行', '', '', '', '〇', ''], ['5', '受付（AD）', '', '', '〇', '', ''], ['6', '受付ST', '', '', '〇', '', ''], ['7', '誘導（AD）', '', '', '', '', '〇'], ['8', '誘導ST', '', '', '', '', '〇']],
+        '', '※本リストは点呼名簿を兼ねます。避難時はエリアごとに点呼し、ADが人数を運営統括へ報告。\n※系統1：〔系統1の用途（例：全体）〕／系統2：〔系統2の用途（例：進行）〕／系統3：〔系統3の用途（例：誘導）〕')),
+      stdContacts: () => S('table', '体制・連絡', '緊急連絡先一覧', tbl(
+        [['区分', 2, 'left'], ['連絡先／担当', 3, 'left'], ['電話番号', 2, 'left'], ['備考', 3, 'left']],
+        [['運営統括（D）', '{{運営統括}}（A&L）', '{{運営統括TEL}}', '現場責任者'], ['制作', '{{制作担当}}（A&L）', '{{制作担当TEL}}', ''], ['会場担当者', '{{事務局}}', '{{事務局TEL}}', ''], ['最寄りの病院', '〔病院名〕', '〔電話番号〕', ''], ['最寄りの警察署', '〔警察署名〕', '〔電話番号〕', '']],
+        '', TXT.contactsAfter)),
+      stdLoadin: () => S('blocks', '会場・搬入出', '搬入・搬出', { blocks: [
+        { type: 'text', body: TXT.stdLoadin },
+        { type: 'image', images: [{ slot: '搬入経路図', w: 16, h: 9 }], width: 100 }] }, { pages: 'auto' }),
+      stdLayout: () => S('blocks', '会場・搬入出', '会場レイアウト（平面図）', { blocks: [
+        { type: 'image', images: [{ slot: '会場平面図・レイアウト', w: 16, h: 12 }], width: 100, tall: true },
+        { type: 'text', body: TXT.stdLayout }] }, { pages: 'auto' }),
+      stdBackyard: () => S('blocks', '会場・搬入出', '控室・バックヤード', { blocks: [
+        { type: 'image', images: [{ slot: '控室・バックヤードの図', w: 16, h: 9 }], width: 100 },
+        { type: 'text', body: TXT.stdBackyard }] }, { pages: 'auto' }),
+      stdSchedule: () => S('schedule', 'スケジュール', 'スケジュール（香盤表）', {}),
+      stdRunsheet: () => S('table', 'スケジュール', '進行表（タイムテーブル）', tbl(
+        [['時間', 1.4, 'center'], ['内容', 4, 'left'], ['担当', 1.6, 'left'], ['備考', 3, 'left']],
+        [['〔00:00〕', '集合・朝礼', '{{運営統括}}', ''], ['〔00:00〕', '受付開始', '受付', ''], ['〔00:00〕', '開場', '', ''], ['〔00:00〕', '開演', '進行', ''], ['〔00:00〕', '終演', '', ''], ['〔00:00〕', '退場・撤去開始', '', '']])),
+      stdChecklist: () => S('text', 'スケジュール', '開場前／閉場後チェックリスト', { body: TXT.checklist }),
+      stdPositions: () => S('table', '運営オペレーション', 'ポジション別 業務定義', tbl(
+        [['アイコン', 1, 'center'], ['ポジション', 2, 'left'], ['人数', 1, 'center'], ['役割', 2.2, 'left'], ['業務内容・備考', 4, 'left']],
+        [['D', '全体運営統括', '1名', '運営管理', '・運営全体の指揮、緊急時の一次判断\n・主催者・会場担当者との窓口'], ['AD', '運営AD', '〔〇〕名', 'エリア統括', '・担当エリアの統括、人員の再配置\n・トラブルの一次対応と統括への報告'], ['受', '受付ST', '〔〇〕名', '受付', '・来場者の確認と配布物のお渡し'], ['誘', '誘導ST', '〔〇〕名', '誘導・列整理', '・待機列の整理、導線の確保\n・「最後尾」サインの管理'], ['物', '物販ST', '〔〇〕名', '物販', '・販売・会計、在庫の管理']],
+        '', '※ポジションは当日ADが割り当てます。持ち場を離れるときは必ず交代者を立ててください。')),
+      stdReception: () => S('blocks', '運営オペレーション', '受付業務', { blocks: [
+        { type: 'image', images: [{ slot: '受付エリアの配置図', w: 16, h: 8 }], width: 100 },
+        { type: 'text', body: TXT.stdReception }] }, { pages: 'auto' }),
+      stdGuide: () => S('blocks', '運営オペレーション', '誘導・待機列業務', { blocks: [
+        { type: 'image', images: [{ slot: '誘導計画図（待機列・導線）', w: 16, h: 9 }], width: 100 },
+        { type: 'text', body: TXT.stdGuide }] }, { pages: 'auto' }),
+      stdStage: () => S('text', '運営オペレーション', 'ステージ進行', { body: TXT.stdStage }),
+      stdDistribution: () => S('table', '運営オペレーション', '配布物一覧', tbl(
+        [['配布物', 3, 'left'], ['数量', 1.2, 'center'], ['配布場所', 2, 'left'], ['配布対象・条件', 4, 'left']],
+        [['〔配布物名〕', '', '受付', '〔例：当選者全員に1つずつ〕'], ['', '', '', '']],
+        '', '■ 配布のポイント\n・配布物は開場前に数量を確認し、閉場後に実配布数と残数を運営統括へ報告する。\n・決められた条件以外で配布しないこと。')),
+      stdSign: () => S('blocks', '運営オペレーション', '制作物・サイン計画', { blocks: [
+        { type: 'image', images: [{ slot: 'サイン・制作物1', w: 4, h: 3 }, { slot: 'サイン・制作物2', w: 4, h: 3 }, { slot: 'サイン・制作物3', w: 4, h: 3 }], width: 100 },
+        { type: 'table', columns: [{ name: '制作物', w: 3, align: 'left' }, { name: 'サイズ', w: 1.5, align: 'center' }, { name: '数量', w: 1, align: 'center' }, { name: '設置場所', w: 3, align: 'left' }], rows: [['〔受付サイン〕', '', '', ''], ['〔最後尾サイン〕', '', '', ''], ['〔撮影禁止サイン〕', '', '', '']], header: true }] }, { pages: 'auto' }),
+      stdRules: () => S('text', 'ルール・リスク管理', 'スタッフ留意事項・服装', { body: TXT.stdRules }),
+      stdEmergency: () => S('text', 'ルール・リスク管理', '緊急時対応', { body: TXT.stdEmergency }),
+      stdDisaster: () => S('text', 'ルール・リスク管理', '地震・災害時対応', { body: TXT.stdDisaster }),
+      stdEquipment: () => S('table', '資料', '備品リスト', tbl(
+        [['品目', 4, 'left'], ['個数', 1, 'center'], ['手配', 2, 'center'], ['備考', 3, 'left']],
+        [['トランシーバー', '', 'A&L', ''], ['折り畳みテーブル', '', '', ''], ['バインダー・ボールペン', '', 'A&L', ''], ['受付リスト', '', 'A&L', '別紙・個人情報'], ['最後尾サイン', '', 'A&L', ''], ['養生テープ・各種テープ類', '', 'A&L', ''], ['救急セット', '', 'A&L', ''], ['ゴミ袋', '', 'A&L', ''], ['延長コード・マルチタップ', '', 'A&L', '']])),
+      stdMemo: () => S('memo', '資料', 'メモ', {}),
       free: () => S('text', 'その他', '新規ページ', { body: '■ 見出し\n・本文' }),
       freeTable: () => S('table', 'その他', '新規表ページ', tbl([['項目', 2, 'left'], ['内容', 5, 'left']], [['', '']])),
       freeImage: () => S('image', 'その他', '画像ページ', { images: [], before: '', after: '' }),
@@ -30871,15 +31149,18 @@ MAX: 9026 };
     contacts: '緊急連絡先一覧', loadin: '搬入・搬出', access: '入退館経路', schedule: 'スケジュール（香盤表）', checklist: '開場前／閉場後チェックリスト',
     positions: 'ポジション別 業務定義', floor: 'ブース図面', guide: '誘導計画', crowd: '混雑時対応・待機列運用', distribution: '配布物 一覧',
     bento: 'お弁当', staff: 'スタッフリスト', sign: 'サイン計画', equipment: '備品リスト', rules: '接客・応対ルール', emergency: '緊急時対応',
-    trouble: 'トラブル対応', memo: 'メモ', free: '自由ページ（文章）', freeTable: '自由ページ（表）', freeImage: '自由ページ（画像）', freeBlocks: '自由ページ（文章・表・画像を自由に並べる）',
+    trouble: 'トラブル対応', memo: 'メモ',
+    stdVenue: '会場情報・アクセス（標準）', stdOrg: '運営体制図（標準）', stdStaff: 'スタッフリスト／トランシーバー系統（標準）', stdLayout: '会場レイアウト（標準）', stdBackyard: '控室・バックヤード（標準）', stdRunsheet: '進行表（標準）',
+    stdReception: '受付業務（標準）', stdGuide: '誘導・待機列業務（標準）', stdStage: 'ステージ進行（標準）', stdSign: '制作物・サイン計画（標準）', stdRules: 'スタッフ留意事項・服装（標準）', stdDisaster: '地震・災害時対応（標準）', free: '自由ページ（文章）', freeTable: '自由ページ（表）', freeImage: '自由ページ（画像）', freeBlocks: '自由ページ（文章・表・画像を自由に並べる）',
   };
 
   const TEMPLATES = {
+    standard: { label: '★標準フォーマット（推奨・イベント全般）', keys: ['stdOverview', 'stdVenue', 'stdOrg', 'stdStaff', 'stdContacts', 'stdLoadin', 'stdLayout', 'stdBackyard', 'stdSchedule', 'stdRunsheet', 'stdChecklist', 'stdPositions', 'stdReception', 'stdGuide', 'stdStage', 'stdDistribution', 'stdSign', 'stdRules', 'stdEmergency', 'stdDisaster', 'stdEquipment', 'stdMemo'] },
     full: { label: '展示会ブース（フル版／GF型）', keys: ['overview', 'booth', 'orgImage', 'org', 'pass', 'contacts', 'loadin', 'access', 'schedule', 'checklist', 'positions', 'floor', 'guide', 'crowd', 'distribution', 'bento', 'staff', 'sign', 'equipment', 'rules', 'emergency', 'trouble', 'memo'] },
     compact: { label: '展示会ブース（簡易版／サンリオ・Eva型）', keys: ['overview', 'org', 'schedule', 'loadin', 'access', 'floor', 'positions', 'distribution', 'staff', 'equipment', 'emergency', 'memo'] },
   };
 
-  function newProject(templateKey = 'full', venue = 'generic') {
+  function newProject(templateKey = 'standard', venue = 'generic') {
     const cat = sectionCatalog();
     const sections = TEMPLATES[templateKey].keys.map((k) => cat[k]());
     if (venue === 'makuhari') {
@@ -30897,7 +31178,15 @@ MAX: 9026 };
         coverLines: ['', ''],
         docDate: '',
         version: 'Ver.1.0',
-        overview: [
+        overview: templateKey === 'standard' ? [
+          { label: '名称', value: '{{イベント名}}' }, { label: '日程', value: '{{開催日}}' },
+          { label: '実施時間', value: '〔開場 00:00／開演 00:00／終演 00:00（予定）〕' },
+          { label: '会場', value: '{{会場名}}\n〒{{会場住所}}' }, { label: '主催', value: '{{主催}}' },
+          { label: '制作・運営', value: 'A&L Project株式会社' }, { label: '実施内容', value: '〔イベントの内容を1〜2行で〕' },
+          { label: '参加・入場', value: '〔例：事前抽選による当選者 〇〇名（入場無料）〕' }, { label: '出演', value: '〔出演者・MC（敬称略）〕' },
+          { label: 'スタッフ集合', value: '〔集合時間〕　〔集合場所〕' },
+          { label: '服装', value: '〔例：スタッフT（貸与）／黒無地パンツ／華美でないスニーカー〕' },
+        ] : [
           { label: '名称', value: '' }, { label: '主催', value: '' }, { label: '出展社', value: '' },
           { label: '制作・運営', value: 'A&L Project株式会社' }, { label: '会場', value: '' }, { label: '会期', value: '' },
           { label: '搬入・設営', value: '' }, { label: '撤去・搬出', value: '' }, { label: '集合場所', value: '' },
@@ -30906,6 +31195,7 @@ MAX: 9026 };
           { label: '支給', value: 'お弁当支給あり' },
         ],
         vars: [
+          { key: '主催', value: '' }, { key: '会場名', value: '' }, { key: '会場住所', value: '' }, { key: '開催日', value: '' },
           { key: '運営統括', value: '' }, { key: '運営統括TEL', value: '' },
           { key: '制作担当', value: '' }, { key: '制作担当TEL', value: '' },
           { key: '事務局', value: '' }, { key: '事務局TEL', value: '' },
@@ -30985,7 +31275,7 @@ MAX: 9026 };
     return v;
   }
   function sub(text, v) {
-    return String(text || '').replace(/\{\{([^}]+)\}\}/g, (m, k) => (k in v && v[k] !== '' ? v[k] : m));
+    return String(text || '').replace(/\{\{([^}]+)\}\}/g, (m, k) => (k in v && v[k] !== '' ? v[k] : '〔' + k + '〕'));
   }
 
   function dataUrlToBytes(dataUrl) {
@@ -31038,6 +31328,7 @@ MAX: 9026 };
       return new TextRun({
         text: String(text), font: FONT, size: Math.round((o.size || BASE) * 2),
         bold: !!o.bold, color: o.color || undefined, break: o.br ? 1 : undefined,
+        highlight: o.hl ? 'yellow' : undefined,
         characterSpacing: o.spacing || undefined,
       });
     }
@@ -31048,8 +31339,9 @@ MAX: 9026 };
         const cm = /^\[#([0-9A-Fa-f]{6})\]([\s\S]*?)\[\/\]$/.exec(part);
         const oo = cm ? { ...o, color: cm[1].toUpperCase() } : o;
         const body = cm ? cm[2] : part;
-        body.split(/(\*\*[^*]+\*\*|!![^!]+!!)/).forEach((tok) => {
+        body.split(/(\*\*[^*]+\*\*|!![^!]+!!|〔[^〕\n]*〕)/).forEach((tok) => {
           if (!tok) return;
+          if (tok.startsWith('〔') && tok.endsWith('〕')) { out.push(R(tok, { ...oo, hl: true })); return; }
           if (tok.startsWith('**') && tok.length > 4) out.push(R(tok.slice(2, -2), { ...oo, bold: true }));
           else if (tok.startsWith('!!') && tok.length > 4) out.push(R(tok.slice(2, -2), { ...oo, bold: true, color: RED }));
           else out.push(R(tok, oo));
@@ -31149,6 +31441,7 @@ MAX: 9026 };
 
     // ---------- 画像 ----------
     function image(img, maxW, maxH, align = AlignmentType.CENTER) {
+      if (img && img.slot && !(img.dataUrl && imgType(img.dataUrl))) return slotBox(img, maxW, maxH);
       if (!img || !img.dataUrl || !imgType(img.dataUrl)) return null;
       const pxW = maxW / 15, pxH = maxH / 15; // twip → px(96dpi)
       const k = Math.min(pxW / img.w, pxH / img.h, 1e9);
@@ -31157,6 +31450,18 @@ MAX: 9026 };
         alignment: align, spacing: { before: 0, after: 0, line: 240, lineRule: 'auto' },
         children: [new ImageRun({ type: imgType(img.dataUrl), data: dataUrlToBytes(img.dataUrl), transformation: { width: w, height: h } })],
       });
+    }
+
+    // 差し替え用の画像枠（まだ画像が入っていない）
+    function slotBox(img, maxW, maxH) {
+      const ar = img.w && img.h ? img.h / img.w : 0.5625;
+      const h = Math.max(700, Math.min(maxH, Math.round(maxW * ar)));
+      const w = Math.max(1200, Math.round(maxW));
+      const b = { style: BorderStyle.DASHED, size: 8, color: '9E9E9E' };
+      return fixedTable([w], [new TableRow({ height: { value: h, rule: HeightRule.EXACT }, children: [
+        cell([P([R('〔画像：' + (img.slot === true ? '差し替え' : img.slot) + '〕', { size: 10, bold: true, color: '7F7F7F', hl: true })], { align: AlignmentType.CENTER, size: 10 }),
+          P([R('ここに画像を入れてください', { size: 8, color: '9E9E9E' })], { align: AlignmentType.CENTER, size: 8 })],
+          { w, valign: VerticalAlign.CENTER, borders: { top: b, bottom: b, left: b, right: b }, fill: 'F7F7F7' })] })], { align: AlignmentType.CENTER });
     }
 
     // ---------- ヘッダー／フッター ----------
@@ -31474,7 +31779,7 @@ MAX: 9026 };
       return out;
     }
     function imageRow(b) {
-      const imgs = (b.images || []).filter((x) => x && x.dataUrl);
+      const imgs = (b.images || []).filter((x) => x && (x.dataUrl || x.slot));
       if (!imgs.length) return [];
       const totalW = Math.round(CW * Math.min(100, Math.max(10, Number(b.width) || 100)) / 100);
       const maxH = Math.round(CH * (b.tall ? 0.9 : 0.6));
@@ -31496,7 +31801,7 @@ MAX: 9026 };
       const d = sec.data || {};
       const out = [];
       if (d.before) { out.push(...markup(d.before)); out.push(spacer(120)); }
-      const imgs = (d.images || []).filter((x) => x && x.dataUrl);
+      const imgs = (d.images || []).filter((x) => x && (x.dataUrl || x.slot));
       const capLines = (d.after || '').split('\n').length + (d.before || '').split('\n').length;
       const availH = CH - capLines * lineOf(BASE) - 600;
       imgs.forEach((img) => {
@@ -31599,7 +31904,7 @@ MAX: 9026 };
       return h + 300;
     }
     function imageH(b) {
-      const imgs = (b.images || []).filter((x) => x && x.w);
+      const imgs = (b.images || []).filter((x) => x && (x.w || x.slot)).map((x) => (x.w ? x : { ...x, w: 16, h: 9 }));
       if (!imgs.length) return 0;
       const totalW = CW * Math.min(100, Number(b.width) || 100) / 100;
       const each = imgs.length === 1 ? totalW : totalW / imgs.length;
@@ -32821,6 +33126,7 @@ MAX: 9026 };
     if (o.bold) css += 'font-weight:700;';
     if (o.color) css += `color:#${o.color};`;
     if (o.characterSpacing) css += `letter-spacing:${o.characterSpacing / 20}pt;`;
+    if (o.highlight) css += 'background:#FFF200;';
     span.style.cssText = css;
     if (o.break) span.appendChild(document.createElement('br'));
     if (o.children) span.textContent = o.children.map((c) => (c === '__PAGE__' ? (ctx.page || '') : String(c))).join('');
@@ -33465,7 +33771,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             }
             const cs = getComputedStyle(n.parentElement);
             const pe = n.parentElement.closest('.om-p'); const plh = pe ? parseFloat(getComputedStyle(pe).lineHeight) : NaN;
-            out.push({ text: t, options: { ...(isFinite(plh) ? { lineSpacing: Math.round(plh * 0.75 * K * 10) / 10 } : {}), fontFace, fontSize: Math.round(parseFloat(cs.fontSize) * 0.75 * K * 10) / 10, bold: Number(cs.fontWeight) >= 600, color: hexOf(cs.color) || '000000' } });
+            const hlc = hexOf(cs.backgroundColor);
+            out.push({ text: t, options: { ...(hlc && hlc !== 'FFFFFF' ? { highlight: hlc } : {}), ...(isFinite(plh) ? { lineSpacing: Math.round(plh * 0.75 * K * 10) / 10 } : {}), fontFace, fontSize: Math.round(parseFloat(cs.fontSize) * 0.75 * K * 10) / 10, bold: Number(cs.fontWeight) >= 600, color: hexOf(cs.color) || '000000' } });
           } else if (n.nodeName === 'BR') { if (out.length) out[out.length - 1].options.breakLine = true; }
           else if (n.nodeType === 1 && n.nodeName !== 'IMG') n.childNodes.forEach((c) => walk(c, st));
         };
@@ -33817,8 +34124,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const bot = hlines.filter((l) => l.y0 > Ht * 0.88).sort((a, b) => a.y0 - b.y0)[0];
     const hdrY = top ? top.y0 + 1 : Ht * 0.06;
     const ftrY = bot ? bot.y0 - 1 : Ht * 0.955;
-    const headTexts = texts.filter((t) => t.y + t.h / 2 < hdrY && t.str.trim());
-    const ht = headTexts.filter((t) => t.x < Wd * 0.62).sort((a, b) => a.y - b.y || a.x - b.x);
+    const headTexts = texts.filter((t) => t.y + t.h / 2 < hdrY && t.str.trim() && !/^[\d\s\/]{1,7}$/.test(t.str.trim()));
+    let ht = headTexts.filter((t) => t.x < Wd * 0.62).sort((a, b) => a.y - b.y || a.x - b.x);
+    if (!ht.length) ht = headTexts.filter((t) => t.x + t.w > Wd * 0.4).sort((a, b) => a.y - b.y || a.x - b.x);
     const title = ht.filter((t) => ht.length && Math.abs(t.yb - ht[0].yb) < Math.max(3, ht[0].cs * 1.6) || (ht[0] && t.yb > ht[0].yb && t.yb - ht[0].yb < ht[0].cs * 1.6 && t.x < Wd * 0.4)).map((t) => t.str).join('').replace(/\s+/g, ' ').trim();
     const headImgs = pg.images.filter((im) => im.y + im.h / 2 < hdrY && im.w > 20);
     const area = { x: 0, y: hdrY, w: Wd, h: ftrY - hdrY };
@@ -33914,9 +34222,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     else md = runs.map((r) => { const v = r.s; if (!v.trim()) return v; if (r.st.includes('r')) return '!!' + v.trim() + '!!'; if (r.st.includes('b') && !allBold) return '**' + v.trim() + '**'; return v; }).join('');
     if (allBold && !allRed && plain.trim() && !/^[■【◆]/.test(plain.trim())) md = '**' + md.trim() + '**';
     if (l.items.every((t) => t.hl) && plain.trim() && plain.length < 40 && !/^■/.test(plain.trim())) md = '■ ' + plain.trim();
-    return { md: md.replace(/\s+$/, ''), plain: plain.trim() };
+    md = md.replace(/^(\s*)[•⚫●▪]\s*/, '$1・');
+    return { md: md.replace(/\s+$/, ''), plain: plain.trim().replace(/^[•⚫●▪]\s*/, '・') };
   }
-  const BULLET = /^[■□・•●◆◇▶▷※①-⑳★☆【\-–―>〇○◎]|^[0-9０-９]{1,2}[\.．)）]|^STEP|^〜|^～/;
+  const BULLET = /^[■□・•●⚫◆◇▶▷※①-⑳★☆【\-–―>〇○◎]|^[0-9０-９]{1,2}[\.．)）]|^STEP|^〜|^～/;
   // 行を段落にまとめる（PowerPointの折り返しで分かれた行はつなげる）
   function linesToBody(lines, colRight) {
     const out = []; let prev = null;
@@ -34055,9 +34364,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         for (const t of textBoxes) { if (used.has(t)) continue; if (ov(t, g.box, 1)) { const nb = union(g.box, t); if (nb.w !== g.box.w || nb.h !== g.box.h || nb.x !== g.box.x || nb.y !== g.box.y) { g.box = nb; grew = true; } used.add(t); } }
       }
     }
-    // 重なった範囲をもう一度まとめる
+    // 重なった範囲をもう一度まとめる（図が細かく分かれている＝フロー図などは、近いもの同士を大きめにまとめる）
+    const mpad = groups.length >= 4 ? 14 : 2;
     changed = true;
-    while (changed) { changed = false; for (let i = 0; i < groups.length && !changed; i++) for (let j = i + 1; j < groups.length; j++) if (ov(groups[i].box, groups[j].box, 2)) { groups[i] = { box: union(groups[i].box, groups[j].box), items: groups[i].items.concat(groups[j].items) }; groups.splice(j, 1); changed = true; break; } }
+    while (changed) { changed = false; for (let i = 0; i < groups.length && !changed; i++) for (let j = i + 1; j < groups.length; j++) if (ov(groups[i].box, groups[j].box, mpad)) { groups[i] = { box: union(groups[i].box, groups[j].box), items: groups[i].items.concat(groups[j].items) }; groups.splice(j, 1); changed = true; break; } }
     // 図の中にある小さな表（組織図の箱など）は図に含める
     for (let k = blocks.length - 1; k >= 0; k--) {
       const bb = blocks[k]; if (!bb.box) continue;
@@ -34117,6 +34427,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   // ---------- 本体 ----------
   async function build(pages, env) {
     const rep = { pages: 0, tables: 0, images: 0, skipped: 0, warnings: [], fonts: [] };
+    // 全ページ共通の飾り（タブ風のナビ・案件名のヘッダーなど）は取り除く
+    const key = (t) => `${Math.round(t.x / 3)}_${Math.round(t.y / 3)}_${t.str.trim()}`;
+    const cnt = {}; pages.forEach((p) => { const seen = new Set(); p.texts.forEach((t) => { if (!t.str.trim()) return; const k = key(t); if (!seen.has(k)) { seen.add(k); cnt[k] = (cnt[k] || 0) + 1; } }); });
+    const lim = Math.max(3, pages.length * 0.4);
+    const rep2 = new Set(Object.keys(cnt).filter((k) => cnt[k] >= lim));
+    const gk = (r) => `${Math.round(r.x / 3)}_${Math.round(r.y / 3)}_${Math.round(r.w / 3)}_${Math.round(r.h / 3)}`;
+    const lk = (l) => `${Math.round(l.x0 / 3)}_${Math.round(l.y0 / 3)}_${Math.round(l.x1 / 3)}_${Math.round(l.y1 / 3)}`;
+    const gc = {}; pages.forEach((p) => { const seen = new Set(); [...p.rects.map((r) => 'r' + gk(r)), ...p.images.map((r) => 'i' + gk(r)), ...p.lines.map((l) => 'l' + lk(l))].forEach((k) => { if (!seen.has(k)) { seen.add(k); gc[k] = (gc[k] || 0) + 1; } }); });
+    // 共通の図形は「画面の上下の帯（ヘッダー・ナビ）」にあるものだけ外す（本文中の表の罫線などは残す）
+    const band = (y, H) => y < H * 0.12 || y > H * 0.9;
+    const repG = (k, y, H) => gc[k] >= lim && band(y, H);
+    if (rep2.size || Object.values(gc).some((v) => v >= lim)) pages = pages.map((p, i) => (i === 0 ? p : { ...p,
+      texts: p.texts.filter((t) => !rep2.has(key(t))),
+      rects: p.rects.filter((r) => !repG('r' + gk(r), r.y, p.height)),
+      lines: p.lines.filter((l) => !repG('l' + lk(l), Math.min(l.y0, l.y1), p.height)),
+      images: p.images.filter((r) => !(repG('i' + gk(r), r.y, p.height) && r.y > p.height * 0.9)) }));
     const A = pages.map((p, i) => analyzePage(p, i));
     // 表紙：1ページ目にヘッダー線がなく「マニュアル」等の大きな文字がある
     let cover = null, startAt = 0;
@@ -34135,7 +34461,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (/^目次|^もくじ|^INDEX$|^CONTENTS$/i.test(a.title || '') || (!a.title && /目次/.test(a.body.slice(0, 3).map((t) => t.str).join('')))) { toc = { ...toc, ...readToc(a) }; rep.skipped++; continue; }
       const blocks = await pageToSection(a, env.crop, rep);
       const hasContent = blocks.some((b) => b.type !== 'text' || b.body.trim());
-      const ttl = a.title || (blocks.find((b) => b.type === 'text') || { body: '' }).body.split('\n')[0].replace(/[*!■【】\[\]]/g, '').slice(0, 30) || `ページ${i + 1}`;
+      let ttl = a.title;
+      if (!ttl) { const fb = blocks.find((b) => b.type === 'text' && b.body.trim() && !b.body.startsWith('[[')); if (fb && blocks.indexOf(fb) === 0) { const ls = fb.body.split('\n'); const l0 = ls[0].replace(/[*!■【】\[\]]/g, '').trim(); if (l0.length <= 30 && !/[：:]/.test(l0)) { ttl = l0; fb.body = ls.slice(1).join('\n').replace(/^\n+/, ''); } } }
+      ttl = ttl || `ページ${i + 1}`;
       // メモページ（タイトルがメモで中身が空）
       if (/^メモ$|^MEMO$/i.test(ttl) && !hasContent) { sections.push({ id: uid(), kind: 'memo', group: '', title: 'メモ', enabled: true, pages: 1, data: {}, _no: pageNo(a) }); continue; }
       if (!hasContent) blocks.push({ type: 'text', body: '' });
@@ -34456,7 +34784,7 @@ let saveTimer, DB=null;
 function idb(){return new Promise((res)=>{try{const r=indexedDB.open('omg_db',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)}catch(e){res(null)}})}
 function idbGet(k){return new Promise((res)=>{if(!DB)return res(null);const t=DB.transaction('kv').objectStore('kv').get(k);t.onsuccess=()=>res(t.result||null);t.onerror=()=>res(null)})}
 function idbPut(k,v){return new Promise((res,rej)=>{if(!DB)return rej();const tx=DB.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=res;tx.onerror=rej})}
-function save(){if(!UNDO_APPLY)undoLater();if(CLOUD&&!UNDO_APPLY)cloudAuto();else if(CLOUD&&UNDO_APPLY&&me&&cloudReady)cloudAuto();clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const js=JSON.stringify(P);try{await idbPut(LS_KEY,js);try{localStorage.removeItem(LS_KEY)}catch(e){}}catch(e){try{localStorage.setItem(LS_KEY,js)}catch(e2){toast('自動保存できませんでした。「作業データを保存」でファイル保存してください')}}},300)}
+function save(){clearTimeout(window._bt);window._bt=setTimeout(()=>{if(TAB==='manual')renderSecListBadges()},500);if(!UNDO_APPLY)undoLater();if(CLOUD&&!UNDO_APPLY)cloudAuto();else if(CLOUD&&UNDO_APPLY&&me&&cloudReady)cloudAuto();clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const js=JSON.stringify(P);try{await idbPut(LS_KEY,js);try{localStorage.removeItem(LS_KEY)}catch(e){}}catch(e){try{localStorage.setItem(LS_KEY,js)}catch(e2){toast('自動保存できませんでした。「作業データを保存」でファイル保存してください')}}},300)}
 async function load(){DB=await idb();try{const s=(await idbGet(LS_KEY))||localStorage.getItem(LS_KEY);if(s)return JSON.parse(s)}catch(e){}return null}
 
 // ---------- 初期化 ----------
@@ -34466,7 +34794,7 @@ async function init(){
   $$('#tabs button[data-t]').forEach(b=>b.onclick=()=>{TAB=b.dataset.t;localStorage.setItem(LS_TAB,TAB);render()});
   $('#newTpl').innerHTML=Object.entries(OMTpl.TEMPLATES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
   if(CLOUD)initCloud();
-  if(!P){P=ensureMeta(OMTpl.newProject('full','generic'));save();render();undoCommit();if(!CLOUD)openFontModal();return}
+  if(!P){P=ensureMeta(OMTpl.newProject('standard','generic'));save();render();undoCommit();if(!CLOUD)openFontModal();return}
   ensureMeta(P);render();undoCommit();
 }
 async function newProjectDlg(){
@@ -34801,7 +35129,7 @@ function renderManual(){
     <div id="secEd"></div></div>`;
   $('#addSel').onchange=e=>{const k=e.target.value;if(!k)return;const s=OMTpl.sectionCatalog()[k]();const idx=P.sections.findIndex(x=>x.id===SEL);
     if(idx>=0){s.group=P.sections[idx].group;P.sections.splice(idx+1,0,s)}else P.sections.push(s);SEL=s.id;save();renderManual()};
-  renderSecEd();
+  renderSecEd();renderSecListBadges();
 }
 function curSec(){return P.sections.find(s=>s.id===SEL)}
 function renderSecEd(){
@@ -34815,6 +35143,7 @@ function renderSecEd(){
     <button class="sm" onclick="mvSec(-1)">↑ 上へ</button><button class="sm" onclick="mvSec(1)">↓ 下へ</button><button class="sm" onclick="dupSec()">複製</button>
     <div style="flex:1"></div><button class="sm" onclick="delSec()">このページを削除</button></div></div>`;
   const d=s.data||(s.data={});
+  h+=todoCard(s);
   if(s.kind==='overview')h+=`<div class="card"><h2>実施概要</h2><p class="hint">「■ 名称」などの項目は「基本情報」タブで編集します。下は項目の後に続く注意事項です。</p>${textField('body',d.body,true)}</div>`;
   else if(s.kind==='text')h+=`<div class="card"><h2>本文</h2>${textField('body',d.body,true)}</div>`;
   else if(s.kind==='table')h+=tableEditor(d);
@@ -34924,6 +35253,8 @@ function renderHelp(){
   <tr><td><code>[#1F4E79]色付き[/]</code></td><td>文中の一部を指定色に（会場状態・スクリーン表示などの指示行）</td></tr>
   <tr><td><code>[[【タイトル】</code> 〜 <code>]]</code></td><td>赤枠のボックス（【本日のポイント】【追加ルール】など）</td></tr>
   <tr><td><code>{{運営統括}}</code></td><td>「基本情報」の共通項目の内容に置き換え</td></tr>
+  <tr><td><code>〔会場名〕</code></td><td>要入力の印。黄色で表示され、ページ上部の「要入力」欄から入力すると置き換わります。残ったまま書き出そうとすると確認が出ます</td></tr>
+  <tr><td>画像の点線枠</td><td>差し替え用の画像枠。枠をクリックして ⌘V でスクリーンショットを貼り付け、または画像をドラッグ</td></tr>
   <tr><td><code>○ / ×</code></td><td>答えてよいこと／いけないことの一覧</td></tr>
   </table></div>
   <div class="card"><h2>読み込めるファイル・読み込めないファイル</h2><div class="hint" style="font-size:12.5px;line-height:1.8">
@@ -34957,6 +35288,7 @@ function fileBase(kind){
   const ev=(P.info.eventName||'イベント').replace(/[\\/:*?"<>|]/g,'_');return `${ymd}_【${kind}】_${ev}`;
 }
 async function exportManual(){
+  if(!confirmTodos())return;
   try{toast('Wordを作成しています…');const doc=OMGen.build(docx,P,'manual');const blob=await docx.Packer.toBlob(doc);download(blob,fileBase('運営マニュアル')+'.docx');toast('書き出しました（ライブラリに記憶しました）');recordHistory('運営マニュアル')}
   catch(e){console.error(e);alert('書き出しに失敗しました：'+e.message)}
 }
@@ -34990,6 +35322,7 @@ async function buildPptBlob(mode,opts){
   }finally{host.remove()}
 }
 async function exportManualPpt(){
+  if(!confirmTodos())return;
   toast('PowerPointを作成しています…（ページが多いと数十秒かかります）');
   try{const blob=await buildPptBlob('manual',{});
     download(blob,fileBase('運営マニュアル')+'.pptx');toast('PowerPointで書き出しました（ライブラリに記憶しました）');recordHistory('運営マニュアル（PPT）');
@@ -35269,7 +35602,7 @@ async function applyImport(){if(P&&P.sections&&P.sections.length)await saveToHis
 // =========================================================
 // ライブラリ（書き出し履歴・テンプレート）
 // =========================================================
-function ensureMeta(p){p.meta=p.meta||{};if(!p.meta.id)p.meta.id=OMTpl.uid()+OMTpl.uid();if(!p.meta.created)p.meta.created=new Date().toISOString();return p}
+function ensureMeta(p){p.meta=p.meta||{};if(p.info){p.info.vars=p.info.vars||[];['開催日','会場住所','会場名','主催'].forEach(k=>{if(!p.info.vars.some(v=>v.key===k))p.info.vars.unshift({key:k,value:''})})}if(!p.meta.id)p.meta.id=OMTpl.uid()+OMTpl.uid();if(!p.meta.created)p.meta.created=new Date().toISOString();return p}
 async function libIndex(){if(CLOUD)return CLIB.slice();try{const s=await idbGet('lib_index');return s?JSON.parse(s):[]}catch(e){return[]}}
 async function libSaveIndex(ix){await idbPut('lib_index',JSON.stringify(ix))}
 async function libPut(entry,project){
@@ -35451,6 +35784,38 @@ function pickDays(action){
 
 
 
+
+// =========================================================
+// 要入力（〔 〕）と画像の差し替え枠
+// =========================================================
+const TODO_RE=/〔[^〕\n]*〕/g;
+function todoFields(s){
+  const F=[];const add=(get,set,where)=>F.push({get,set,where});
+  const d=s.data||{};
+  if(s.kind==='overview')(P.info.overview||[]).forEach((r,i)=>add(()=>r.value,v=>{r.value=v},'実施概要：'+(r.label||'')));
+  ['body','before','after'].forEach(k=>{if(typeof d[k]==='string')add(()=>d[k],v=>{d[k]=v},'')});
+  const tbl=(t,where)=>{(t.rows||[]).forEach((row,ri)=>row.forEach((c,ci)=>{if(typeof c==='string')add(()=>row[ci],v=>{row[ci]=v},where+'表 '+(ri+1)+'行目')}))};
+  if(s.kind==='table')tbl(d,'');
+  (d.blocks||[]).forEach((b,bi)=>{if(b.type==='text')add(()=>b.body,v=>{b.body=v},'');if(b.type==='table')tbl(b,'');if(b.type==='table'&&typeof b.before==='string')add(()=>b.before,v=>{b.before=v},'')});
+  return F;
+}
+function todoList(s){const out=[];todoFields(s).forEach((f,fi)=>{const t=String(f.get()||'');let m,n=0;TODO_RE.lastIndex=0;while((m=TODO_RE.exec(t))){out.push({f,fi,n:n++,label:m[0],ctx:t.slice(Math.max(0,m.index-18),m.index).split('\n').pop()})}});return out}
+function slotList(s){const out=[];const d=s.data||{};(d.images||[]).forEach(im=>{if(im&&im.slot&&!im.dataUrl)out.push(im)});(d.blocks||[]).forEach(b=>(b.images||[]).forEach(im=>{if(im&&im.slot&&!im.dataUrl)out.push(im)}));return out}
+function todoCount(s){return todoList(s).length+slotList(s).length}
+function todoFill(fi,n,v){
+  const s=curSec();const f=todoFields(s)[fi];if(!f||v==='')return;
+  let k=0;f.set(String(f.get()).replace(TODO_RE,m=>k++===n?v:m));save();renderSecEd();renderSecListBadges();
+}
+function todoCard(s){
+  const L=todoList(s),S=slotList(s);if(!L.length&&!S.length)return '';
+  return `<div class="card todo"><h2>このページの要入力（${L.length}箇所${S.length?`・画像 ${S.length}枚`:''}）</h2>
+  <p class="hint" style="margin:0 0 6px">黄色の〔 〕は案件ごとに入れ替える部分です。右の欄に入力して Enter を押すと、その部分が置き換わります。本文の中で直接書き換えてもかまいません。${S.length?'画像は下の点線の枠をクリックして ⌘V で貼り付けるか、画像をドラッグしてください。':''}</p>
+  ${L.map(t=>`<div class="tr"><span class="lb" title="${esc(t.f.where)}">${esc(t.label)}</span><input type="text" placeholder="${esc((t.ctx?t.ctx+'…':'')+'ここに入力して Enter')}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.dataset.done=1;todoFill(${t.fi},${t.n},this.value)}" onchange="if(!this.dataset.done){this.dataset.done=1;todoFill(${t.fi},${t.n},this.value)}"><span class="hint">${esc(t.f.where)}</span></div>`).join('')}
+  </div>`;
+}
+function renderSecListBadges(){$$('.secitem').forEach(el=>{const s=P.sections[+el.dataset.i];if(!s)return;const n=todoCount(s);let b=el.querySelector('.td');if(n){if(!b){b=document.createElement('span');b.className='td';el.querySelector('.t').after(b)}b.textContent='要入力'+n}else if(b)b.remove()})}
+function todoTotal(){let t=0,im=0;P.sections.filter(s=>s.enabled!==false).forEach(s=>{t+=todoList(s).length;im+=slotList(s).length});return{t,im}}
+function confirmTodos(){const {t,im}=todoTotal();if(!t&&!im)return true;return confirm(`まだ入れ替えていない部分があります。\n・要入力の〔 〕：${t}箇所\n・画像の差し替え枠：${im}枚\n\nこのまま書き出すと、黄色の印のまま出力されます。書き出しますか？`)}
 // =========================================================
 // 不具合の記録と報告（デバッグ用）
 // =========================================================
@@ -35476,7 +35841,9 @@ function saveBug(){
 let PASTE_AT=null;
 document.addEventListener('mousedown',e=>{
   const z=e.target.closest&&e.target.closest('.pasteZone');
-  $$('.pasteZone.on').forEach(x=>x.classList.remove('on'));
+  $$('.pasteZone.on,.slotTile.on').forEach(x=>x.classList.remove('on'));
+  const st=e.target.closest&&e.target.closest('.slotTile');
+  if(st){st.classList.add('on');PASTE_AT={kind:'slot',arr:st.dataset.slotarr,k:+st.dataset.k,sec:SEL};return}
   if(z){z.classList.add('on');PASTE_AT={kind:z.dataset.paste,bi:z.dataset.bi!=null?+z.dataset.bi:null,sec:SEL};return}
   const blk=e.target.closest&&e.target.closest('[data-dnd="mblk"]');
   if(blk){PASTE_AT={kind:'blkAfter',bi:+blk.dataset.i,sec:SEL};return}
@@ -35490,6 +35857,9 @@ async function putImages(files,at){
   const imgs=[];for(const f of files){try{imgs.push(await readImage(f))}catch(e){toast('画像を読み込めませんでした')}}
   if(!imgs.length)return true;
   at=at||PASTE_AT;
+  if(at&&at.kind==='slot'&&TAB==='manual'&&at.sec===SEL){
+    try{const A=(new Function('return '+at.arr))();const old=A[at.k]||{};A[at.k]={...imgs[0],slot:old.slot};if(imgs.length>1)A.splice(at.k+1,0,...imgs.slice(1));save();renderSecEd();toast('画像を入れました（「'+(old.slot===true?'画像':old.slot||'画像')+'」）');return true}catch(e){}
+  }
   if(TAB==='sched'){
     const d=P.schedule.days[DAY];
     if(d&&d.type==='list'){
@@ -35533,7 +35903,7 @@ async function pasteFromClipboard(kind,bi){
   }catch(e){toast('このブラウザではボタンから読み込めません。枠をクリックしてから ⌘V（Ctrl+V）を押してください')}
 }
 // 画像ファイルをページ上にドラッグして追加
-document.addEventListener('dragover',e=>{if(DRAG)return;if([...(e.dataTransfer.types||[])].includes('Files')){e.preventDefault();const z=e.target.closest&&e.target.closest('.pasteZone');$$('.pasteZone.drag').forEach(x=>x!==z&&x.classList.remove('drag'));if(z)z.classList.add('drag')}});
+document.addEventListener('dragover',e=>{if(DRAG)return;if([...(e.dataTransfer.types||[])].includes('Files')){e.preventDefault();const z=e.target.closest&&e.target.closest('.pasteZone,.slotTile');$$('.pasteZone.drag,.slotTile.drag').forEach(x=>x!==z&&x.classList.remove('drag'));if(z)z.classList.add('drag')}});
 document.addEventListener('dragleave',e=>{const z=e.target.closest&&e.target.closest('.pasteZone');if(z)z.classList.remove('drag')});
 document.addEventListener('drop',async e=>{
   if(DRAG)return;const files=clipImages(e.dataTransfer);if(!files.length)return;
@@ -35541,7 +35911,9 @@ document.addEventListener('drop',async e=>{
   e.preventDefault();$$('.pasteZone.drag').forEach(x=>x.classList.remove('drag'));
   const z=e.target.closest&&e.target.closest('.pasteZone');
   let at=PASTE_AT;
-  if(z)at={kind:z.dataset.paste,bi:z.dataset.bi!=null?+z.dataset.bi:null,sec:SEL};
+  const st=e.target.closest&&e.target.closest('.slotTile');
+  if(st)at={kind:'slot',arr:st.dataset.slotarr,k:+st.dataset.k,sec:SEL};
+  else if(z)at={kind:z.dataset.paste,bi:z.dataset.bi!=null?+z.dataset.bi:null,sec:SEL};
   else{const blk=e.target.closest('[data-dnd="mblk"]');if(blk)at={kind:'blkAfter',bi:+blk.dataset.i,sec:SEL};const row=e.target.closest('tr[data-dnd="lrow"]');if(row)at={kind:'lrow',ri:+row.dataset.i}}
   await putImages(files,at);
 });
@@ -35569,8 +35941,12 @@ const DND={
 let DRAG=null;
 function dndClear(){$$('.drop-before,.drop-after,.drop-left,.drop-right,.dropok').forEach(e=>e.classList.remove('drop-before','drop-after','drop-left','drop-right','dropok'))}
 // 画像1枚分：ドラッグで並べ替え・差し替え・削除
-function imgTile(im,key,k,a,arr){return `<div class="im" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''}><img src="${im.dataUrl}" draggable="false"><div class="imops"><label class="sm btnl">差し替え<input type="file" accept="image/*" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像を削除しますか？')){${arr}.splice(${k},1);save();renderSecEd()}">削除</button></div></div>`}
-async function imgReplace(arr,k,inp){const f=inp.files[0];if(!f)return;try{arr[k]=await readImage(f);save();renderSecEd();toast('画像を差し替えました')}catch(e){toast('画像を読み込めませんでした')}}
+function imgTile(im,key,k,a,arr){
+  if(im.slot&&!im.dataUrl)return `<div class="im slotTile" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''} data-slotarr="${arr}" data-k="${k}" title="クリックしてから ⌘V でスクリーンショットを貼り付け／画像ファイルをドラッグ">
+    <div class="slotBox"><b>〔画像：${esc(im.slot===true?'差し替え':im.slot)}〕</b><small>クリックして ⌘V で貼り付け<br>または画像をここにドラッグ</small></div>
+    <div class="imops"><label class="btnl">画像を選ぶ<input type="file" accept="image/*" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像枠を削除しますか？')){${arr}.splice(${k},1);save();renderSecEd()}">枠を削除</button></div></div>`;
+  return `<div class="im" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''}><img src="${im.dataUrl}" draggable="false">${im.slot?`<div class="slotCap">${esc(im.slot===true?'':im.slot)}</div>`:''}<div class="imops"><label class="sm btnl">差し替え<input type="file" accept="image/*" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像を削除しますか？')){${arr}.splice(${k},1);save();renderSecEd()}">削除</button></div></div>`}
+async function imgReplace(arr,k,inp){const f=inp.files[0];if(!f)return;try{const old=arr[k]||{};arr[k]=await readImage(f);if(old.slot)arr[k].slot=old.slot;save();renderSecEd();toast('画像を差し替えました')}catch(e){toast('画像を読み込めませんでした')}}
 document.addEventListener('dragstart',e=>{
   const ch=e.target.closest&&e.target.closest('.ch');
   if(ch){const td=ch.closest('td[data-cell]');DRAG={cell:td.dataset.cell.split(',').map(Number)};td.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','c');e.dataTransfer.setDragImage(td,10,10)}catch(x){}return}
