@@ -249,14 +249,16 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.25-23</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-24</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
   <button onclick="$('#fileImport').click()" title="アプリの外で作った運営マニュアル（Word）を取り込み、アプリの形式に変換">既存マニュアル読込</button>
   <input type="file" id="fileImport" accept=".docx,.doc,.pdf,.xlsx,.xls,.pages,.rtf,.txt" hidden onchange="importDocxFile(this)">
-  <button onclick="$('#fileOpen').click()" title="このアプリで保存した作業データ（.json）を開いて、続きから編集">作業データを開く</button>
-  <button onclick="saveJSON()" title="今の作業内容をファイルに保存（このアプリで続きから編集する用）">作業データを保存</button>
+  <button class="primary" onclick="saveNow()" title="いまの作業内容をアプリ内（作業データ一覧）に保存。変更は自動でも保存されます">保存</button>
+  <div class="dd" id="fileMenu"><button onclick="event.stopPropagation();$('#fileMenu').classList.toggle('on');$('#pvMenu').classList.remove('on');$('#exMenu').classList.remove('on')">ファイル ▾</button>
+    <div class="ddm"><button onclick="$('#fileMenu').classList.remove('on');saveJSON()"><b>作業データをファイルに書き出す</b><small>バックアップや、別の環境に移すとき用（.json）</small></button>
+      <button onclick="$('#fileMenu').classList.remove('on');$('#fileOpen').click()"><b>ファイルから開く</b><small>書き出した作業データ（.json）を開く</small></button></div></div>
   <span id="undoBar"><button id="undoBtn" onclick="undoGo(-1)" title="元に戻す（⌘Z／Ctrl+Z）" disabled>↶</button><button id="redoBtn" onclick="undoGo(1)" title="やり直す（⌘⇧Z／Ctrl+Y）" disabled>↷</button></span>
   <div class="dd" id="pvMenu"><button onclick="event.stopPropagation();$('#pvMenu').classList.toggle('on');$('#exMenu').classList.remove('on')">プレビュー ▾</button>
     <div class="ddm"><button onclick="$('#pvMenu').classList.remove('on');previewManual()"><b>マニュアル全体</b><small>表紙・目次・本文・香盤表</small></button>
@@ -311,7 +313,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <!-- ブロック編集モーダル -->
 <div class="modal" id="blkModal"><div class="box">
   <h3 id="blkTitle">ブロック</h3>
-  <label class="f"><span>色（何をしている時間か）</span><div class="swatches" id="bColor"></div></label>
+  <label class="f"><span>色</span><div class="swatches" id="bColor"></div></label>
   <label class="f"><span>内容（改行可）</span><textarea id="bText" style="min-height:52px"></textarea></label>
   <div class="grid2">
     <label class="f"><span>列</span><select id="bCol"></select></label>
@@ -31234,14 +31236,14 @@ MAX: 9026 };
   // 標準の色（案件ごとに追加・編集できる。project.palette が優先）
   // name＝色の名前、label＝その色が表す内容（ブロックの文字が空欄のときに表示）
   const PALETTE = {
-    yellow: { fill: 'FFF2A8', name: '黄', label: '搬入・入り' },
-    beige:  { fill: 'FCE4C4', name: 'ベージュ', label: '施工・設営' },
-    blue:   { fill: 'DCE9F7', name: '水色', label: '準備・ロープレ' },
-    green:  { fill: 'E2EFD9', name: '緑', label: 'リハーサル' },
-    pink:   { fill: 'F9DCE8', name: 'ピンク', label: '本番・稼働' },
-    purple: { fill: 'E8E0F3', name: '紫', label: '出演者' },
-    gray:   { fill: 'E7E6E6', name: 'グレー', label: '休憩・撤収' },
-    red:    { fill: 'FFD7D7', name: '赤', label: '要注意' },
+    yellow: { fill: 'FFF2A8', name: '黄', label: '' },
+    beige:  { fill: 'FCE4C4', name: 'ベージュ', label: '' },
+    blue:   { fill: 'DCE9F7', name: '水色', label: '' },
+    green:  { fill: 'E2EFD9', name: '緑', label: '' },
+    pink:   { fill: 'F9DCE8', name: 'ピンク', label: '' },
+    purple: { fill: 'E8E0F3', name: '紫', label: '' },
+    gray:   { fill: 'E7E6E6', name: 'グレー', label: '' },
+    red:    { fill: 'FFD7D7', name: '赤', label: '' },
     white:  { fill: 'FFFFFF', name: '白', label: '' },
   };
   // 案件の色一覧（並び順つき）
@@ -31571,7 +31573,7 @@ MAX: 9026 };
             const pc = PAL[b.color] || PAL.white || PALETTE.white;
             const fill = pc.fill;
             const time = `${b.start}〜${b.end}`;
-            const label = String(b.text || '').trim() ? String(b.text) : (pc.label || ''); // 空欄なら色の意味を表示
+            const label = String(b.text || '');
             const paras = [];
             const fitsTwo = g.span * rowH >= (label.split('\n').length + 1) * (fs * 20 * 1.25) + 40;
             if (fitsTwo) {
@@ -33505,7 +33507,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const r1 = HR + 1 + a, r2 = HR + z, c1 = c + 2, c2 = c + 1 + cs;
         if (r2 > r1 || c2 > c1) ws.mergeCells(r1, c1, r2, c2);
         const pc = PAL[b.color] || PAL.white || { fill: 'FFFFFF', label: '' };
-        const label = String(b.text || '').trim() ? b.text : (pc.label || '');
+        const label = String(b.text || '');
         const cell = ws.getCell(r1, c1);
         cell.value = { richText: [{ text: label, font: font({ bold: true, size: BASE - 0.5 }) }, ...(b.showTime !== false ? [{ text: (label ? '\n' : '') + `${b.start}〜${b.end}`, font: font({ size: BASE - 1.5 }) }] : [])] };
         cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
@@ -34784,7 +34786,7 @@ let saveTimer, DB=null;
 function idb(){return new Promise((res)=>{try{const r=indexedDB.open('omg_db',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)}catch(e){res(null)}})}
 function idbGet(k){return new Promise((res)=>{if(!DB)return res(null);const t=DB.transaction('kv').objectStore('kv').get(k);t.onsuccess=()=>res(t.result||null);t.onerror=()=>res(null)})}
 function idbPut(k,v){return new Promise((res,rej)=>{if(!DB)return rej();const tx=DB.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=res;tx.onerror=rej})}
-function save(){clearTimeout(window._bt);window._bt=setTimeout(()=>{if(TAB==='manual')renderSecListBadges()},500);if(!UNDO_APPLY)undoLater();if(CLOUD&&!UNDO_APPLY)cloudAuto();else if(CLOUD&&UNDO_APPLY&&me&&cloudReady)cloudAuto();clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const js=JSON.stringify(P);try{await idbPut(LS_KEY,js);try{localStorage.removeItem(LS_KEY)}catch(e){}}catch(e){try{localStorage.setItem(LS_KEY,js)}catch(e2){toast('自動保存できませんでした。「作業データを保存」でファイル保存してください')}}},300)}
+function save(){if(!UNDO_APPLY)localAuto();clearTimeout(window._bt);window._bt=setTimeout(()=>{if(TAB==='manual')renderSecListBadges()},500);if(!UNDO_APPLY)undoLater();if(CLOUD&&!UNDO_APPLY)cloudAuto();else if(CLOUD&&UNDO_APPLY&&me&&cloudReady)cloudAuto();clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const js=JSON.stringify(P);try{await idbPut(LS_KEY,js);try{localStorage.removeItem(LS_KEY)}catch(e){}}catch(e){try{localStorage.setItem(LS_KEY,js)}catch(e2){toast('自動保存できませんでした。「作業データを保存」でファイル保存してください')}}},300)}
 async function load(){DB=await idb();try{const s=(await idbGet(LS_KEY))||localStorage.getItem(LS_KEY);if(s)return JSON.parse(s)}catch(e){}return null}
 
 // ---------- 初期化 ----------
@@ -34939,8 +34941,8 @@ function renderSched(){
     <div class="agrid">
       <div class="agroup"><span>読み込み・保存</span><div class="abtns">
         <button class="sbtn" onclick="$('#schedImport').click()" title="Excel・Word・PDFで作った香盤表をこのアプリの形式に変換">既存の香盤表を読込</button>
-        <button class="sbtn" onclick="saveSchedJSON()" title="香盤表の作業データ（このアプリで続きから編集するためのファイル）を保存">作業データを保存</button>
-        <button class="sbtn" onclick="$('#schedOpen').click()" title="保存した香盤表の作業データを開く">作業データを開く</button></div></div>
+        <button class="sbtn" onclick="saveNow()" title="いまの作業内容をアプリ内（作業データ一覧）に保存">保存</button>
+        <button class="sbtn" onclick="TAB='lib';render()" title="保存した作業データの一覧を開く">作業データ一覧</button></div></div>
       <div class="agroup"><span>プレビュー（香盤表のみ）</span><div class="abtns">
         <button class="sbtn" onclick="pickDays('preview')">日程を選ぶ</button>
         <button class="sbtn" onclick="previewSchedule(true)">全日程</button></div></div>
@@ -34951,7 +34953,7 @@ function renderSched(){
       <input type="file" id="schedImport" accept=".xlsx,.xlsm,.xls,.docx,.doc,.pdf,.csv,.numbers,.pages,.png,.jpg,.jpeg,.heic,.ppt,.pptx,.key" hidden onchange="importScheduleFile(this)">
       <input type="file" id="schedOpen" accept=".json" hidden onchange="openSchedJSON(this)">
     </div>
-    <p class="hint" style="margin:10px 0 0">「既存の香盤表を読込」は Excel／Word／PDF に対応。「作業データ」は、このアプリで続きから編集するための専用ファイル（.json）です（人に渡す用ではありません）。ここで作った香盤表は「マニュアル構成」の「スケジュール（香盤表）」ページにも日別で自動的に入ります。</p>
+    <p class="hint" style="margin:10px 0 0">「既存の香盤表を読込」は Excel／Word／PDF に対応。作業内容は自動で保存され、「★作業データ一覧」からいつでも開けます。ここで作った香盤表は「マニュアル構成」の「スケジュール（香盤表）」ページにも日別で自動的に入ります。</p>
   </div>
   <div class="card sset"><h2>香盤表の設定</h2>
     <div class="sgrid">
@@ -35001,12 +35003,12 @@ function dayEditor(d){
   for(let r=0;r<n;r++){
     html+=`<tr><td class="time ${slots[r]%60===0?'h':''}">${OMGen.toHM(slots[r])}</td>`;
     cols.forEach((c,ci)=>{const g=grid[ci][r];if(g==='x')return;
-      if(g){const b=d.blocks[g.bi];const pc=palMap()[b.color]||palMap().white||{fill:'FFFFFF',label:''};const lab=String(b.text||'').trim()?b.text:(pc.label||'');
+      if(g){const b=d.blocks[g.bi];const pc=palMap()[b.color]||palMap().white||{fill:'FFFFFF',label:''};const lab=String(b.text||'');
         html+=`<td class="blk" draggable="true" data-gb="${g.bi}" rowspan="${g.span}" colspan="${g.cs}" style="background:#${pc.fill}" onclick="editBlock(${g.bi})">${esc(lab)}${b.showTime!==false?`<small>${b.start}〜${b.end}</small>`:''}</td>`}
       else html+=`<td class="slot" data-gs="${ci},${slots[r]}" onclick="newBlock(${ci},${slots[r]})"></td>`});
     html+='</tr>';
   }
-  html+=`</table><div class="legend">${palList().map(v=>`<span><i style="background:#${v.fill}"></i>${esc(v.name)}${v.label?'（'+esc(v.label)+'）':''}</span>`).join('')}</div>
+  html+=`</table>
   <label class="f" style="margin-top:14px"><span>【本日のポイント】（赤枠で表の下に入ります。空欄なら入りません）</span>
   <textarea oninput="P.schedule.days[DAY].points=this.value;save()" placeholder="・入り 9:00 ／ 準備 9:00〜10:00 ／ ブース開場 10:00〜17:00&#10;・翌日は入りが 8:30 に早まります。集合時間の変更を全員へ周知。">${esc(d.points||'')}</textarea></label>`;
   return html;
@@ -35028,11 +35030,9 @@ let PALOPEN=false;
 function paletteEditor(){
   const L=palList();
   return `<div class="card" style="background:#fafafa"><h2>ブロックの色</h2>
-  <p class="hint" style="margin-top:-6px">「意味」は、ブロックの内容が空欄のときに時間と一緒に表示されます（例：水色＝準備・ロープレ）。この設定は案件ごとに保存され、テンプレートにも引き継がれます。</p>
-  <table class="ed"><tr><th style="width:70px">色</th><th style="width:160px">色の名前</th><th>意味（ブロックに表示する文字）</th><th style="width:80px"></th></tr>
+  <p class="hint" style="margin-top:-6px">ブロックや色帯に使える色です。色の追加・変更・並べ替えができます。この設定は案件ごとに保存され、テンプレートにも引き継がれます。</p>
+  <table class="ed" style="width:auto"><tr><th style="width:90px">色</th><th style="width:80px"></th></tr>
   ${L.map((p,i)=>`<tr><td><input type="color" value="#${p.fill}" oninput="palEdit(${i},'fill',this.value)"></td>
-    <td><input type="text" value="${esc(p.name)}" oninput="palEdit(${i},'name',this.value)"></td>
-    <td><input type="text" value="${esc(p.label||'')}" placeholder="例：準備・ロープレ" oninput="palEdit(${i},'label',this.value)"></td>
     <td><button class="ghost sm" onclick="palMove(${i},-1)">↑</button>${p.key==='white'?'':`<button class="ghost sm" onclick="palDel(${i})">×</button>`}</td></tr>`).join('')}</table>
   <div style="display:flex;gap:6px;margin-top:6px"><button class="sm" onclick="palAdd()">＋ 色を追加</button><div style="flex:1"></div><button class="ghost sm" onclick="if(confirm('色の設定を標準に戻しますか？')){delete P.palette;save();renderSched()}">標準の色に戻す</button></div></div>`;
 }
@@ -35055,8 +35055,8 @@ function blkForm(b){
   $('#bText').value=b.text||'';$('#bCol').value=String(b.col);fillSpan();$('#bSpan').value=String(Math.min(+b.span||1,$('#bSpan').options.length));$('#bStart').value=b.start;$('#bShowTime').checked=b.showTime!==false;
   // 色
   const L=palList();let cur=b.color&&palMap()[b.color]?b.color:'blue';if(!L.some(p=>p.key===cur))cur=(L[0]||{}).key;
-  $('#bColor').innerHTML=L.map(p=>`<label class="${p.key===cur?'on':''}" data-c="${p.key}"><i style="background:#${p.fill}"></i>${esc(p.name)}${p.label?'（'+esc(p.label)+'）':''}</label>`).join('')+`<label onclick="closeModal('blkModal');PALOPEN=true;renderSched()" style="color:var(--sub)">＋ 色を追加・編集</label>`;
-  const setPh=()=>{const k=($('#bColor label.on')||{}).dataset?.c;const lb=(palMap()[k]||{}).label||'';$('#bText').placeholder=lb?`空欄なら「${lb}」と表示されます`:'内容を入力'};
+  $('#bColor').innerHTML=L.map(p=>`<label class="${p.key===cur?'on':''}" data-c="${p.key}"><i style="background:#${p.fill}"></i></label>`).join('')+`<label onclick="closeModal('blkModal');PALOPEN=true;renderSched()" style="color:var(--sub)">＋ 色を追加・編集</label>`;
+  const setPh=()=>{$('#bText').placeholder='内容を入力'};
   $$('#bColor label[data-c]').forEach(l=>l.onclick=()=>{$$('#bColor label').forEach(x=>x.classList.remove('on'));l.classList.add('on');setPh()});setPh();
   // 時間
   if(!$('#bDurM').options.length)$('#bDurM').innerHTML=[0,5,10,15,20,25,30,35,40,45,50,55].map(m=>`<option value="${m}">${m}</option>`).join('');
@@ -35097,7 +35097,7 @@ function saveBlock(){
   if(OMGen.toMin(b.end)<=OMGen.toMin(b.start)){$('#bWarn').textContent=BMODE==='dur'?'所要時間を入力してください':'終了は開始より後にしてください';return}
   if(OMGen.toMin(b.end)>24*60){$('#bWarn').textContent='24:00を超える時間は入れられません';return}
   const clash=d.blocks.find((x,i)=>i!==editing&&+x.col<b.col+b.span&&b.col<+x.col+(+x.span||1)&&OMGen.toMin(x.start)<OMGen.toMin(b.end)&&OMGen.toMin(b.start)<OMGen.toMin(x.end));
-  if(clash){$('#bWarn').textContent=`同じ列の「${clash.text||(palMap()[clash.color]||{}).label||''}」（${clash.start}〜${clash.end}）と時間が重なっています`;return}
+  if(clash){$('#bWarn').textContent=`同じ列の「${clash.text||'ブロック'}」（${clash.start}〜${clash.end}）と時間が重なっています`;return}
   if(OMGen.toMin(b.end)>OMGen.toMin(S.end)){S.end=OMGen.toHHMM(Math.min(24*60,Math.ceil(OMGen.toMin(b.end)/60)*60));toast(`香盤表の時間帯を ${S.end} まで広げました`)}
   if(editing===null)d.blocks.push(b);else d.blocks[editing]={...d.blocks[editing],...b};
   save();closeModal('blkModal');renderSched();
@@ -35275,7 +35275,7 @@ function renderHelp(){
   ・それでも<b>書体が開く側のPCに無いと置き換わります</b>。書体選択で「推奨」が付いたものを使うか、クライアント指定書体の場合は両方のPCにインストールしてください。</div></div>
   <div class="card"><h2>作業の流れ</h2><div class="hint" style="font-size:12.5px">
   ① 新規作成 → 書体を選択 ② 基本情報（表紙・実施概要・担当者） ③ 香盤表を作成 → 香盤表だけWord書き出しして先に共有 ④ マニュアル構成で各ページを入力 → 運営マニュアルをWord書き出し（香盤表は自動で入ります）<br>
-  データは自動でブラウザに保存されます。案件ごとに「作業データを保存」でファイルにしておくと、別のPCでも続きから作業できます。</div></div>`;
+  作業内容は自動で保存され、「★作業データ一覧」から開けます。「保存」ボタンを押すとその場で保存されます。</div></div>`;
 }
 
 // =========================================================
@@ -35328,6 +35328,16 @@ async function exportManualPpt(){
     download(blob,fileBase('運営マニュアル')+'.pptx');toast('PowerPointで書き出しました（ライブラリに記憶しました）');recordHistory('運営マニュアル（PPT）');
   }catch(e){console.error(e);alert('PowerPointの書き出しに失敗しました：'+e.message)}
 }
+// 保存ボタン：アプリ内（作業データ一覧）に保存。共有モードなら共有に、ファイル版ならこのブラウザ内に
+async function saveNow(){
+  ensureMeta(P);
+  if(String(P.meta.id).startsWith('tpl_')){await saveAsTemplate();return}
+  if(CLOUD){const ent=curEntry();if(ent&&!canEditEntry(ent)){toast('ほかの人のデータは保存できません。黄色の帯の「複製して自分のデータにする」を押してください');return}await cloudFlush();toast('保存しました（作業データ一覧に入っています）');return}
+  await saveToHistoryNow(true);
+}
+// ファイル版：変更があれば作業データ一覧にも自動保存（5秒後）
+let LOCAL_AUTO=null;
+function localAuto(){if(CLOUD||!DB||!P||!P.meta||String(P.meta.id).startsWith('tpl_'))return;clearTimeout(LOCAL_AUTO);LOCAL_AUTO=setTimeout(()=>saveToHistoryNow(false),5000)}
 function saveJSON(){download(new Blob([JSON.stringify(P)],{type:'application/json'}),fileBase('マニュアルデータ')+'.json');toast('保存しました')}
 function openJSON(inp){const f=inp.files[0];if(!f)return;f.text().then(t=>{const j=JSON.parse(t);if(!j.sections||!j.info){toast('マニュアルデータのファイルではありません');return}P=ensureMeta(j);SEL=null;DAY=0;save();render();toast('読み込みました')}).catch(()=>toast('読み込みに失敗しました'));inp.value=''}
 
@@ -35366,7 +35376,7 @@ async function importDocxFile(inp){
       <tr><td>元の書体</td><td>${esc(report.fonts.join('、')||'—')}</td></tr></table>
       <p class="hint" style="margin-top:10px">見出し（◆・番号付き見出し）ごとに1章として、アプリの体裁（ヘッダー・ページ番号・表の罫線・文字サイズ）にそろえています。<br>
       テキストボックスで描かれた香盤表は、香盤表データに変換しました（時間・列の位置は念のため「香盤表」タブで確認してください）。<br>
-      このあと書体を選びます。現在の作業内容は置き換わるので、必要なら先に「作業データを保存」してください。</p>`;
+      このあと書体を選びます。現在の作業内容は置き換わるので、いまの内容は「★作業データ一覧」に残ります。</p>`;
     $('#impActs').innerHTML=`<button onclick="closeModal('impModal')">キャンセル</button><button class="primary" onclick="applyImport()">読み込んだ内容で開く</button>`;
   }catch(e){console.error(e);showProblem('impModal','#impBody','#impActs',readError(e,f.name))}
 }
@@ -35402,7 +35412,7 @@ async function importManualPdf(f){
       <table class="help"><tr><td>ページ（章）</td><td><b>${report.pages}</b>（元のPDF ${pages.length}ページ${report.skipped?'・目次などを除く':''}）</td></tr><tr><td>表</td><td>${report.tables}</td></tr><tr><td>図・写真（画像として切り出し）</td><td>${report.images}</td></tr>
       <tr><td>イベント名</td><td>${esc(project.info.eventName)}</td></tr></table>
       <p class="hint" style="margin-top:10px">PDFの1ページを1つのページ（章）として、文章・表・画像を上から順に並べています。目次がある場合は、目次の章分けをそのまま使っています。<br>
-      このあと書体を選びます。現在の作業内容は置き換わるので、必要なら先に「作業データを保存」してください。</p>`;
+      このあと書体を選びます。現在の作業内容は置き換わるので、いまの内容は「★作業データ一覧」に残ります。</p>`;
     $('#impActs').innerHTML=`<button onclick="closeModal('impModal')">キャンセル</button><button class="primary" onclick="applyImport()">読み込んだ内容で開く</button>`;
   }catch(e){
     console.error(e);
@@ -35525,7 +35535,7 @@ function listEditor(d){
   d.rows.forEach((r,ri)=>{
     const k=r.kind||'item',c=r.cells||(r.cells=[]);
     const kindSel=`<select class="kind" onchange="LD().rows[${ri}].kind=this.value;save();renderSched()">${Object.entries(LKIND).map(([v,l])=>`<option value="${v}" ${v===k?'selected':''}>${l}</option>`).join('')}</select>`+
-      (k==='section'?(()=>{const ck=r.color||'beige';const pc=palMap()[ck]||{};return `<div class="secColor"><button class="csw" style="background:#${secFill(r)}" title="色を選ぶ" onclick="event.stopPropagation();secPick(${ri},this)"></button><input type="text" value="${esc(pc.label||'')}" placeholder="意味（例：施工・設営）" title="この色の意味（案件ごとに変更できます。同じ色を使っているところすべてに反映）" oninput="palLabelSet('${ck}',this.value)"></div>`})():'');
+      (k==='section'?(()=>{const ck=r.color||'beige';const pc=palMap()[ck]||{};return `<div class="secColor"><button class="csw" style="background:#${secFill(r)}" title="色を選ぶ" onclick="event.stopPropagation();secPick(${ri},this)"></button></div>`})():'');
     const ops=`<td class="ops"><span class="dh" draggable="true" title="ドラッグで並べ替え">⠿</span><button class="ghost" onclick="lRow(${ri},-1)">↑</button><button class="ghost" onclick="lRow(${ri},1)">↓</button><br><button class="ghost" title="下に行を追加" onclick="lAdd(${ri})">＋</button><button class="ghost" onclick="lDel(${ri})">×</button></td>`;
     const cellTa=(i,st)=>ta(c[i],`LD().rows[${ri}].cells[${i}]=this.value;save()`,st);
     if(k==='item'){
@@ -35546,7 +35556,7 @@ function secPick(ri,btn){
   $$('.cpop').forEach(x=>x.remove());
   const cur=LD().rows[ri].color||'beige';
   const pop=document.createElement('div');pop.className='cpop';
-  pop.innerHTML=palList().filter(p=>p.key!=='white').map(p=>`<button class="csw ${p.key===cur?'on':''}" style="background:#${p.fill}" title="${esc(p.label||'')}" data-k="${p.key}"></button>`).join('');
+  pop.innerHTML=palList().filter(p=>p.key!=='white').map(p=>`<button class="csw ${p.key===cur?'on':''}" style="background:#${p.fill}" data-k="${p.key}"></button>`).join('');
   pop.onclick=e=>{e.stopPropagation();const b=e.target.closest('[data-k]');if(!b)return;LD().rows[ri].color=b.dataset.k;pop.remove();save();renderSched()};
   const r=btn.getBoundingClientRect();pop.style.left=(r.left+window.scrollX)+'px';pop.style.top=(r.bottom+window.scrollY+4)+'px';document.body.appendChild(pop);
 }
@@ -35607,7 +35617,7 @@ async function libIndex(){if(CLOUD)return CLIB.slice();try{const s=await idbGet(
 async function libSaveIndex(ix){await idbPut('lib_index',JSON.stringify(ix))}
 async function libPut(entry,project){
   if(CLOUD){try{await cloudPut(entry,JSON.parse(JSON.stringify(project)));return true}catch(e){toast(e.code==='readonly'?'ほかの人のデータは上書きできません（複製して自分のデータにしてください）':'共有に保存できませんでした（'+(e.code||e.message)+'）');return false}}
-  if(!DB){toast('このブラウザではライブラリに保存できません。「作業データを保存」をご利用ください');return false}
+  if(!DB){toast('このブラウザではライブラリに保存できません。「ファイル ▾」→「作業データをファイルに書き出す」をご利用ください');return false}
   await idbPut('lib:'+entry.id,JSON.stringify(project));
   const ix=(await libIndex()).filter(x=>x.id!==entry.id);ix.unshift(entry);await libSaveIndex(ix);return true;
 }
@@ -35630,11 +35640,11 @@ async function saveAsTemplate(){
   ensureMeta(P);const copy=JSON.parse(JSON.stringify(P));
   if(await libPut({id:'t_'+OMTpl.uid(),kind:'template',name,date:new Date().toISOString(),...summary(copy)},copy)){toast('テンプレートとして保存しました');if(TAB==='lib')renderLib()}
 }
-async function saveToHistoryNow(){ensureMeta(P);if(CLOUD){await cloudFlush();return}
+async function saveToHistoryNow(loud=true){ensureMeta(P);if(CLOUD){await cloudFlush();return}
   if(P.meta.id.startsWith('tpl_'))return; // テンプレート編集中は履歴に入れない
-  P.meta.updated=new Date().toISOString();save();
+  P.meta.updated=new Date().toISOString();UNDO_APPLY=true;save();UNDO_APPLY=false;clearTimeout(LOCAL_AUTO);
   const old=(await libIndex()).find(x=>x.id==='h_'+P.meta.id);
-  if(await libPut({id:'h_'+P.meta.id,kind:'history',name:P.info.eventName||'（無題）',date:P.meta.updated,last:old?old.last:'',...summary(P)},P)){toast('ライブラリに保存しました');if(TAB==='lib')renderLib()}}
+  if(await libPut({id:'h_'+P.meta.id,kind:'history',name:P.info.eventName||'（無題）',date:P.meta.updated,last:old?old.last:'',...summary(P)},P)){if(loud)toast('保存しました（作業データ一覧に入っています）');if(TAB==='lib')renderLib()}}
 const fmtDate=(s)=>{if(!s)return'';const d=new Date(s);return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
 async function renderLib(){
   if(CLOUD)return renderCloudLib();
@@ -35656,7 +35666,7 @@ async function renderLib(){
     <b>${esc(P.info.eventName||'（無題）')}</b>${P.meta&&P.meta.templateId?'<span class="pill">テンプレートを編集中</span>':''}${P.meta&&P.meta.basedOn?`<span class="pill">元：${esc(P.meta.basedOn)}</span>`:''}<span class="hint">${(P.sections||[]).length}ページ構成・香盤表${P.schedule.days.length}日・書体 ${esc(P.fonts.ja)}</span><span style="flex:1"></span>
     <button onclick="saveToHistoryNow()">ライブラリに保存</button><button class="primary" onclick="saveAsTemplate()">テンプレートとして保存</button></div>
     <p class="hint" style="margin:8px 0 0">運営マニュアル・香盤表をWord書き出しすると、その時点の内容が自動で「書き出し履歴」に記憶されます（同じ案件は最新の状態に上書き）。<br>
-    ライブラリはこのパソコンのこのブラウザ内に保存されます。別のPCで使う・共有する場合は「作業データを保存」で書き出して、「開く」から読み込んでください。</p></div>
+    ライブラリはこのパソコンのこのブラウザ内に保存されます。別のPCで使う・共有する場合は「ファイル ▾」→「作業データをファイルに書き出す」で書き出して、「ファイルから開く」で読み込んでください。</p></div>
   <div class="card"><h2>テンプレート（${tpls.length}）</h2>${tpls.length?`<div class="libgrid">${tpls.map(card).join('')}</div>`:'<p class="hint">まだありません。よく使う案件を開いて「テンプレートとして保存」すると、ここに並びます。</p>'}</div>
   <div class="card"><h2>書き出し履歴（過去の案件）（${hist.length}）</h2>${hist.length?`<div class="libgrid">${hist.map(card).join('')}</div>`:'<p class="hint">まだありません。Word書き出しをすると自動で記憶されます。</p>'}</div>`;
 }
@@ -36020,7 +36030,7 @@ document.addEventListener('keydown',e=>{
   undoGo(k==='y'||e.shiftKey?1:-1);
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#pv').classList.contains('on'))closePreview();$('#pvMenu').classList.remove('on')}});
-document.addEventListener('click',()=>{['#pvMenu','#exMenu'].forEach(s=>{const m=$(s);if(m)m.classList.remove('on')})});
+document.addEventListener('click',()=>{['#pvMenu','#exMenu','#fileMenu'].forEach(s=>{const m=$(s);if(m)m.classList.remove('on')})});
 
 init();
 </script>
