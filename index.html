@@ -192,7 +192,10 @@ body:not(.cloud) .cloudOnly{display:none!important}
 .mchip{display:inline-flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:#fff;line-height:1.3}
 .mchip .mmail{font-size:10.5px;padding:1px 4px;margin-top:2px;align-self:flex-start;color:var(--red)}
 .mchip.own{border-color:var(--red);background:#fff6f6}.mchip b{font-size:12.5px}.mchip small{font-size:10.5px;color:#777}
-.memgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.memgrid textarea{min-height:110px;font-size:12px}
+.memadd{display:flex;gap:12px;align-items:flex-end;margin-top:12px}.memadd>label{flex:1}.memadd textarea{min-height:70px;font-size:12px}.memaddR{display:flex;flex-direction:column;gap:8px;min-width:170px}
+.mchip i{font-style:normal;font-size:10px;color:#8a6d00;background:#fff3c4;border-radius:4px;padding:0 4px;margin-top:2px;align-self:flex-start}
+.memh{font-size:13px;margin:18px 0 6px}.memtbl{width:100%;border-collapse:collapse;font-size:12.5px}.memtbl th{text-align:left;font-weight:600;color:#666;border-bottom:1px solid var(--line);padding:6px 8px}
+.memtbl td{border-bottom:1px solid #eee;padding:6px 8px;vertical-align:middle}.memtbl select{font-size:12.5px;padding:3px 6px;width:auto;min-width:130px}.memtbl .ops{text-align:right;white-space:nowrap}.memtbl .ops button{margin-left:4px}
 #loginLog{list-style:none;padding:0;margin:6px 0 0;max-height:220px;overflow:auto;font-size:12px}#loginLog li{padding:3px 0;border-bottom:1px solid #f0f0f0}
 .libgrid{display:flex;flex-direction:column;gap:8px}
 .libcard{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#fff;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:18px;row-gap:3px;align-items:center}
@@ -265,7 +268,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-34</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-35</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -295,7 +298,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
   <button class="ghost sm" id="bugBtn" onclick="openBug()" title="不具合・気になる点を報告">🐞 不具合を報告<span id="bugN"></span></button>
   <span class="cloudOnly who"><span id="who"></span><button class="ghost sm" id="bOut" hidden onclick="cloudLogout()">ログアウト</button></span>
 </nav>
-<div id="roBar" hidden><b id="roWho"></b>のデータを見ています。変更しても共有には保存されません。<button class="primary sm" onclick="dupMine()">複製して自分のデータにする</button></div>
+<div id="roBar" hidden><span id="roMsg">閲覧のみの権限です。変更しても共有には保存されません。</span></div>
 <main id="main"></main>
 
 <!-- 書体モーダル -->
@@ -34570,16 +34573,21 @@ https://github.com/nodeca/pako/blob/main/LICENSE
  * 共有モード（Firebase）
  * 公開URL（https）で開いたときだけ有効。会社のGoogleアカウントでログインし、
  * 作業データ・テンプレートを全員で共有する。ファイルとして開いたときは今までどおり端末内に保存。
- * 権限：全員が閲覧・複製して新規作成OK／自分で作ったデータは本人も編集可／削除はオーナーのみ
+ * 権限：オーナー（全権）／閲覧・編集／閲覧のみ。メンバーに入っていない人は見られない。削除とメンバー管理はオーナーのみ
  * ========================================================= */
 const FB_CONFIG = {apiKey:"AIzaSyDO_Vk4HOKDCjqh_-v9jzYLrf03NOcC4-s",authDomain:"a-l-manual-maker.firebaseapp.com",projectId:"a-l-manual-maker",storageBucket:"a-l-manual-maker.firebasestorage.app",messagingSenderId:"291770976316",appId:"1:291770976316:web:992fb7ad718cc13ec49b39"};
 const NOTIFY_URL = ''; // 招待リスト外ログインのメール通知（Apps Script）を使う場合にURLを入れる
-const OWNER0 = 'airi_ishida@alonzo.jp', DOMAIN = 'alonzo.jp';
+const OWNER0 = 'airi_ishida@alonzo.jp', FIXED_OWNERS = ['airi_ishida@alonzo.jp', 'info@alonzo.jp'], DOMAIN = 'alonzo.jp';
 const CLOUD = !!FB_CONFIG && location.protocol === 'https:' && (() => { try { return window.self === window.top } catch (e) { return false } })();
 const SID = Math.random().toString(36).slice(2) + Date.now().toString(36); // この画面の識別（自分の保存で再読込しないため）
-let CLOUD_ERR = null, me = null, roles = { owners: [OWNER0], invited: [] }, fdb = null, CLIB = [], cloudReady = false, cloudNotified = false;
-const isOwner = () => !!(me && (me.email === OWNER0 || (roles.owners || []).includes(me.email)));
-const canEditEntry = (x) => !CLOUD || !x || isOwner() || !x.createdBy || !!(me && x.createdBy === me.email);
+let CLOUD_ERR = null, me = null, roles = { owners: [...FIXED_OWNERS], editors: [], viewers: [] }, rolesReady = false, libUnsub = null, fdb = null, CLIB = [], cloudReady = false, cloudNotified = false;
+// 権限：'owner'（全権）／'edit'（閲覧・編集）／'view'（閲覧のみ）／''（メンバー外）
+function roleOf(e) { e = String(e || '').toLowerCase(); if (FIXED_OWNERS.includes(e) || (roles.owners || []).includes(e)) return 'owner'; if ((roles.editors || []).includes(e)) return 'edit'; if ((roles.viewers || []).includes(e)) return 'view'; return '' }
+const myRole = () => (me ? roleOf(me.email) : '');
+const isOwner = () => myRole() === 'owner';
+const canEdit = () => !CLOUD || myRole() === 'owner' || myRole() === 'edit';
+const isMember = () => !!myRole();
+const canEditEntry = (x) => !CLOUD || canEdit();
 const curEntryId = () => P && P.meta && !String(P.meta.id).startsWith('tpl_') ? 'h_' + P.meta.id : null;
 const curEntry = () => { const id = curEntryId(); return id ? CLIB.find((x) => x.id === id) : null };
 function loadScript(u) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = u; s.onload = res; s.onerror = rej; document.head.appendChild(s) }) }
@@ -34632,7 +34640,7 @@ const ENTRY_DROP = ['createdBy', 'createdByName', 'createdAt', 'updatedAt', 'upd
 function cleanEntry(e) { const o = JSON.parse(JSON.stringify(e)); ENTRY_DROP.forEach((k) => delete o[k]); return o }
 async function cloudPut(entry, project, opt = {}) {
   const cur = CLIB.find((x) => x.id === entry.id);
-  if (cur && !canEditEntry(cur)) { const e = new Error('readonly'); e.code = 'readonly'; throw e }
+  if (!canEdit()) { const e = new Error('readonly'); e.code = 'readonly'; throw e }
   await pushImages(project);
   const json = bodyJson(project); const parts = [];
   for (let i = 0; i < json.length; i += 800000) parts.push(json.slice(i, i + 800000));
@@ -34668,7 +34676,7 @@ async function cloudDel(id) {
   for (let i = 0; i < (m.parts || 1); i++) b.delete(fdb.collection('libBody').doc(id + '__' + i));
   await b.commit(); return true;
 }
-async function cloudRename(id, name) { const x = CLIB.find((e) => e.id === id); if (!canEditEntry(x)) { toast('名前を変えられるのは作った人とオーナーだけです'); return } await fdb.collection('lib').doc(id).update({ name, sid: SID }) }
+async function cloudRename(id, name) { const x = CLIB.find((e) => e.id === id); if (!canEditEntry(x)) { toast('閲覧のみの権限では名前を変えられません'); return } await fdb.collection('lib').doc(id).update({ name, sid: SID }) }
 
 // ---------- いま開いている作業データの自動保存 ----------
 const CSAVE = { timer: null, busy: false, last: '', json: {}, roShown: false };
@@ -34676,7 +34684,7 @@ function cloudStatus(t, bad) { const s = $('#cloudSt'); if (s) { s.textContent =
 function cloudAuto() {
   if (!(CLOUD && me && cloudReady) || !curEntryId()) return;
   if (P.meta && P.meta.pristine) return; // 開いただけの白紙（まだ何も入力していない）は共有に保存しない
-  const ent = curEntry(); if (ent && !canEditEntry(ent)) { roBar(); return }
+  if (!canEdit()) { roBar(); return }
   clearTimeout(CSAVE.timer); CSAVE.timer = setTimeout(cloudAutoRun, 2000); cloudStatus('保存待ち…');
 }
 async function cloudAutoRun(force) {
@@ -34686,7 +34694,7 @@ async function cloudAutoRun(force) {
   if (P.meta && P.meta.pristine) return;
   if (CSAVE.busy) { CSAVE.timer = setTimeout(cloudAutoRun, 800); return }
   const ent = CLIB.find((x) => x.id === id);
-  if (ent && !canEditEntry(ent)) { roBar(); return }
+  if (!canEdit()) { roBar(); return }
   CSAVE.busy = true; cloudStatus('保存中…');
   try {
     const entry = { id, kind: 'history', name: P.info.eventName || '（無題）', date: new Date().toISOString(), last: CSAVE.last || (ent && ent.last) || '', ...summary(P) };
@@ -34710,9 +34718,9 @@ async function cloudFlush() { if (CSAVE.timer) { clearTimeout(CSAVE.timer) } awa
 // ほかの人のデータを開いているとき
 function roBar() {
   const ent = curEntry(); const bar = $('#roBar'); if (!bar) return;
-  const ro = !!(CLOUD && me && ent && !canEditEntry(ent));
+  const ro = !!(CLOUD && me && rolesReady && !canEdit());
   bar.hidden = !ro; document.body.classList.toggle('ro', ro);
-  if (ro) { $('#roWho').textContent = (ent.createdByName || ent.createdBy) + 'さん'; cloudStatus('閲覧のみ（共有には保存されません）') }
+  if (ro) { $('#roMsg').textContent = isMember() ? '閲覧のみの権限です。変更しても共有には保存されません。' : 'メンバーに登録されていません。オーナーに追加を依頼してください（それまでは共有に保存されません）。'; cloudStatus(isMember() ? '閲覧のみ（共有には保存されません）' : 'メンバー未登録', !isMember()) }
 }
 function dupMine() {
   const from = P.info.eventName || '';
@@ -34755,8 +34763,23 @@ async function onLogin(u) {
   if (!email.endsWith('@' + DOMAIN)) { try { await firebase.auth().signOut() } catch (e) { } loginMsg(`@${DOMAIN} のGoogleアカウントでログインしてください（${email}）`); return }
   me = { email, name: u.displayName || email }; $('#login').hidden = true; whoUI();
   fdb.collection('logins').add({ email, name: me.name, at: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => { });
-  fdb.collection('config').doc('roles').onSnapshot((d) => { const x = d.exists ? d.data() : {}; roles = { owners: [OWNER0, ...(x.owners || []).filter((e) => e !== OWNER0)], invited: x.invited || [] }; checkInvite(); whoUI(); roBar(); ownerAlert(); if (TAB === 'lib') renderLib() }, () => { });
-  fdb.collection('lib').onSnapshot(async (snap) => {
+  fdb.collection('config').doc('roles').onSnapshot((d) => {
+    const x = d.exists ? d.data() : {}; const low = (a) => (a || []).map((e) => String(e).toLowerCase());
+    const owners = [...new Set([...FIXED_OWNERS, ...low(x.owners)])];
+    const editors = low(x.editors || x.invited).filter((e) => !owners.includes(e));
+    const viewers = low(x.viewers).filter((e) => !owners.includes(e) && !editors.includes(e));
+    roles = { owners, editors, viewers }; rolesReady = true;
+    checkInvite(); whoUI(); roBar(); ownerAlert(); libSub();
+    if (TAB === 'lib') renderLib();
+  }, (e) => { rolesReady = true; CLOUD_ERR = e.code || e.message; cloudStatus('メンバー情報を読み込めません（' + CLOUD_ERR + '）', true); if (TAB === 'lib') renderLib() });
+}
+// 作業データ一覧の購読（メンバーだけ）
+function libSub() {
+  if (isMember()) { if (!libUnsub) libUnsub = fdb.collection('lib').onSnapshot(libSnap, (e) => { CLOUD_ERR = e.code || e.message; cloudStatus('共有に保存できていません（' + CLOUD_ERR + '）', true); toast('共有データを読み込めません（' + CLOUD_ERR + '）'); if (TAB === 'lib') renderLib(); }) }
+  else { if (libUnsub) { libUnsub(); libUnsub = null } CLIB = []; cloudReady = false; cloudStatus('メンバー未登録', true) }
+}
+async function libSnap(snap) {
+    CLOUD_ERR = null;
     CLIB = []; snap.forEach((d) => { const x = d.data(); x.id = d.id; x.date = x.updatedAt && x.updatedAt.toDate ? x.updatedAt.toDate().toISOString() : (x.date || ''); CLIB.push(x) });
     const first = !cloudReady; cloudReady = true;
     const id = curEntryId(), ent = id && CLIB.find((x) => x.id === id);
@@ -34765,12 +34788,11 @@ async function onLogin(u) {
       else showConflict();
     } else if (first && id && !ent) cloudAuto(); // 端末にあったデータを共有に上げる
     roBar(); if (TAB === 'lib') renderLib();
-    if (first) cloudStatus(ent && !canEditEntry(ent) ? '閲覧のみ' : '共有に保存済み');
-  }, (e) => { CLOUD_ERR = e.code || e.message; cloudStatus('共有に保存できていません（' + CLOUD_ERR + '）', true); toast('共有データを読み込めません（' + CLOUD_ERR + '）'); if (TAB === 'lib') renderLib(); });
+    if (first) cloudStatus(!canEdit() ? '閲覧のみ' : '共有に保存済み');
 }
-function whoUI() { const w = $('#who'); if (w) w.textContent = CLOUD && me ? me.name + (isOwner() ? '（オーナー）' : '') : ''; const o = $('#bOut'); if (o) o.hidden = !(CLOUD && me) }
+function whoUI() { const w = $('#who'); if (w) w.textContent = CLOUD && me ? me.name + ({ owner: '（オーナー）', edit: '', view: '（閲覧のみ）' }[myRole()] ?? '（メンバー未登録）') : ''; const o = $('#bOut'); if (o) o.hidden = !(CLOUD && me) }
 function checkInvite() {
-  if (!me || cloudNotified) return; if (isOwner() || roles.invited.includes(me.email)) return; cloudNotified = true;
+  if (!me || cloudNotified) return; if (!rolesReady || isMember()) return; cloudNotified = true;
   if (NOTIFY_URL) fetch(NOTIFY_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ email: me.email, name: me.name, app: 'A&L 運営マニュアル Maker' }) }).catch(() => { });
 }
 let ownerChecked = false;
@@ -34778,35 +34800,54 @@ async function ownerAlert() {
   if (ownerChecked || !isOwner()) return; ownerChecked = true;
   try {
     const last = +localStorage.getItem('omg.lastLoginSeen') || 0, s = await fdb.collection('logins').orderBy('at', 'desc').limit(50).get(); const hits = new Map(); let newest = last;
-    s.forEach((d) => { const r = d.data(), t = r.at && r.at.toMillis ? r.at.toMillis() : 0; if (t > newest) newest = t; if (t > last && !(r.email === OWNER0 || roles.owners.includes(r.email) || roles.invited.includes(r.email))) hits.set(r.email, r.name || r.email) });
+    s.forEach((d) => { const r = d.data(), t = r.at && r.at.toMillis ? r.at.toMillis() : 0; if (t > newest) newest = t; if (t > last && !roleOf(r.email)) hits.set(r.email, r.name || r.email) });
     localStorage.setItem('omg.lastLoginSeen', newest);
-    if (hits.size) toast('前回以降、招待リスト外のログインがありました：' + [...hits.values()].join('、') + '（作業データ一覧の「メンバー」で確認できます）');
+    if (hits.size) toast('前回以降、メンバー外のログインがありました：' + [...hits.values()].join('、') + '（作業データ一覧の「メンバー」で確認できます）');
   } catch (e) { }
 }
-async function saveMembers() {
-  const parse = (v) => [...new Set(v.split(/[\s,、]+/).map((x) => x.trim().toLowerCase()).filter((x) => x.includes('@')))];
-  const owners = parse($('#memOwn').value); if (!owners.includes(OWNER0)) owners.unshift(OWNER0);
-  const invited = parse($('#memInv').value);
-  const before = new Set([...(roles.owners || []), ...(roles.invited || [])]);
-  const added = [...new Set([...owners, ...invited])].filter((e) => !before.has(e) && e !== me.email);
+// メンバーの保存（オーナーだけ）
+async function putRoles(r) {
+  const owners = r.owners.filter((e) => !FIXED_OWNERS.includes(e));
+  await fdb.collection('config').doc('roles').set({ owners: [...FIXED_OWNERS, ...owners], editors: r.editors, viewers: r.viewers, updatedBy: me.email, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  MEMNAMES.at = 0;
+}
+function rolesWith(email, role, base = roles) {
+  const r = { owners: base.owners.filter((e) => e !== email), editors: base.editors.filter((e) => e !== email), viewers: base.viewers.filter((e) => e !== email) };
+  if (role === 'owner') r.owners.push(email); else if (role === 'edit') r.editors.push(email); else if (role === 'view') r.viewers.push(email);
+  return r;
+}
+async function addMembers() {
+  if (!isOwner()) return;
+  const list = [...new Set($('#memAdd').value.split(/[\s,、;；]+/).map((x) => x.trim().toLowerCase()).filter((x) => x.includes('@')))];
+  if (!list.length) { toast('メールアドレスを入力してください'); return }
+  const bad = list.filter((e) => !e.endsWith('@' + DOMAIN)); if (bad.length) { toast(`@${DOMAIN} 以外のアドレスはログインできません：` + bad.join('、')); return }
+  const added = list.filter((e) => !roleOf(e)); const role = $('#memAddRole').value || 'edit';
+  if (!added.length) { toast('すでにメンバーに入っています'); return }
+  let r = roles; added.forEach((e) => { r = rolesWith(e, role, r) });
   try {
-    await fdb.collection('config').doc('roles').set({ owners, invited, updatedBy: me.email }); MEMNAMES.at = 0; toast('メンバーを保存しました'); if (TAB === 'lib') renderLib();
-    if (added.length && confirm('新しく追加した人に招待メールを送りますか？\n' + added.join('\n') + '\n\n（Gmailの作成画面が開きます。内容を確認して「送信」を押してください）')) inviteMail(added, owners);
-  } catch (e) { toast('保存できませんでした（' + (e.code || e.message) + '）') }
+    await putRoles(r); $('#memAdd').value = ''; toast(added.length + '名をメンバーに追加しました'); if (TAB === 'lib') renderLib();
+    if (confirm('追加した人に招待メールを送りますか？\n' + added.join('\n') + '\n\n（Gmailの作成画面が開きます。内容を確認して「送信」を押してください）')) inviteMail(added);
+  } catch (e) { toast('追加できませんでした（' + (e.code || e.message) + '）') }
+}
+async function setRole(email, role) {
+  if (!isOwner() || FIXED_OWNERS.includes(email)) return;
+  if (email === me.email && role !== 'owner' && !confirm('自分のオーナー権限を外すと、メンバーの管理ができなくなります。よろしいですか？')) { renderLib(); return }
+  if (!role && !confirm(email + ' をメンバーから外しますか？\n（作業データを見られなくなります）')) return;
+  try { await putRoles(rolesWith(email, role)); toast(role ? '権限を変更しました' : 'メンバーから外しました') }
+  catch (e) { toast('変更できませんでした（' + (e.code || e.message) + '）'); renderLib() }
 }
 async function loadLogins() {
   const L = $('#loginLog'); L.innerHTML = '<li class="hint">読み込み中…</li>';
   try {
     const s = await fdb.collection('logins').orderBy('at', 'desc').limit(40).get(); const rows = []; s.forEach((d) => rows.push(d.data()));
-    L.innerHTML = rows.map((r) => { const t = r.at && r.at.toDate ? r.at.toDate() : null, inv = r.email === OWNER0 || roles.owners.includes(r.email) || roles.invited.includes(r.email); return `<li><b>${esc(r.name || r.email)}</b> <span class="hint">${esc(r.email)}　${t ? esc(t.toLocaleString('ja-JP')) : ''}</span>${inv ? '' : ' <span class="pill" style="background:#fde8e8;color:var(--red)">招待外</span>'}</li>` }).join('') || '<li class="hint">まだ記録がありません</li>';
+    L.innerHTML = rows.map((r) => { const t = r.at && r.at.toDate ? r.at.toDate() : null, inv = !!roleOf(r.email); return `<li><b>${esc(r.name || r.email)}</b> <span class="hint">${esc(r.email)}　${t ? esc(t.toLocaleString('ja-JP')) : ''}</span>${inv ? '' : ' <span class="pill" style="background:#fde8e8;color:var(--red)">招待外</span>'}</li>` }).join('') || '<li class="hint">まだ記録がありません</li>';
   } catch (e) { L.innerHTML = `<li class="hint">読み込めませんでした（${esc(e.code || e.message)}）</li>` }
 }
 
 // 招待メール：Gmailの作成画面を、宛先・件名・本文を入れた状態で開く（送信はユーザーが押す）
 const APP_URL = 'https://a-ishida-al.github.io/A-L-Manual-Maker/';
-function inviteMail(list, owners) {
-  owners = owners || roles.owners || [];
-  const anyOwner = list.some((e) => owners.includes(e));
+function inviteMail(list) {
+  const rl = list.map(roleOf), anyOwner = rl.includes('owner'), allView = rl.every((x) => x === 'view');
   const su = '【A&L】運営マニュアル Maker へのご招待';
   const body = `お疲れさまです。${me ? me.name : ''}です。
 
@@ -34816,8 +34857,7 @@ function inviteMail(list, owners) {
 ${APP_URL}
 
 ・ログイン後、「★作業データ一覧」から、共有されている作業データを開けます。
-・新しく作る場合は「新規」→「★標準フォーマット（推奨）」から始めてください。黄色の〔 〕を入れ替え、点線の枠に画像を貼るだけで完成します。
-${anyOwner ? '・オーナーとして登録しているので、ほかの人の作業データの編集・削除、メンバーの管理もできます。\n' : ''}・パソコンのChromeで開くのがおすすめです。
+${allView ? '・閲覧のみの権限でご招待しています。\n' : '・新しく作る場合は「新規」→「★標準フォーマット（推奨）」から始めてください。黄色の〔 〕を入れ替え、点線の枠に画像を貼るだけで完成します。\n'}${anyOwner ? '・オーナーとして登録しているので、作業データの編集・削除、メンバーの管理もできます。\n' : ''}・パソコンのChromeで開くのがおすすめです。
 
 よろしくお願いします。`;
   const u = 'https://mail.google.com/mail/?view=cm&fs=1' + (me ? '&authuser=' + encodeURIComponent(me.email) : '') + '&to=' + encodeURIComponent(list.join(',')) + '&su=' + encodeURIComponent(su) + '&body=' + encodeURIComponent(body);
@@ -35421,7 +35461,7 @@ async function exportManualPpt(){
 async function saveNow(){
   ensureMeta(P);
   if(String(P.meta.id).startsWith('tpl_')){await saveAsTemplate();return}
-  if(CLOUD){const ent=curEntry();if(ent&&!canEditEntry(ent)){toast('ほかの人のデータは保存できません。黄色の帯の「複製して自分のデータにする」を押してください');return}await cloudFlush();toast('保存しました（作業データ一覧に入っています）');return}
+  if(CLOUD){if(!canEdit()){toast(isMember()?'閲覧のみの権限のため、共有には保存できません':'メンバーに登録されていないため、共有には保存できません');return}await cloudFlush();toast('保存しました（作業データ一覧に入っています）');return}
   await saveToHistoryNow(true);
 }
 // ファイル版：変更があれば作業データ一覧にも自動保存（5秒後）
@@ -35765,6 +35805,7 @@ function renderCloudLib(){
     <p>エラー：<code>${esc(CLOUD_ERR)}</code></p>
     <p>${CLOUD_ERR==='permission-denied'?'Firebaseのアクセスルールがまだ公開されていないか、内容が違う可能性があります。オーナーがFirebaseの「Firestore Database」→「ルール」に、アプリ用のルールを貼り付けて「公開」してください。':'通信状態を確認して、ページを再読み込みしてください。'}</p>
     <p class="hint">いま作業中の内容は、このパソコンのブラウザ内に保存されています（消えていません）。接続できるようになると、自動で共有に保存されます。念のため「ファイル ▾」→「作業データをファイルに書き出す」でバックアップもできます。</p></div>`;return}
+  if(me&&rolesReady&&!isMember()){$('#main').innerHTML=`<div class="card"><h2>メンバーに登録されていません</h2><p>${esc(me.email)} は、まだこのアプリのメンバーに入っていません。オーナー（石田さん・國府島さん）にメンバーへの追加を依頼してください。追加されると、この画面に作業データが表示されます。</p></div>`;return}
   if(!me||!cloudReady){$('#main').innerHTML='<div class="card"><p class="hint">共有データを読み込んでいます…</p></div>';return}
   const curId=curEntryId();
   const q=LIBF.q.trim().toLowerCase();
@@ -35779,27 +35820,29 @@ function renderCloudLib(){
     <div class="nm">${esc(x.name||'（無題）')}<span class="inf">作成：${esc(byName(x))}${org?`<i>｜</i>主催：${esc(org)}`:''}<i>｜</i>最終更新：${fmtDate(x.date)}${x.updatedByName&&x.updatedBy!==x.createdBy?'（'+esc(x.updatedBy===me.email?'自分':x.updatedByName)+'）':''}${x.docDate?`<i>｜</i>発行日 ${esc(x.docDate)}`:''}${isCur?'<b>表示中</b>':''}</span></div>
     ${x.kind==='template'&&x.event&&x.event!==x.name||x.basedOn?`<div class="mt">${x.kind==='template'&&x.event&&x.event!==x.name?'元の案件：'+esc(x.event)+'　':''}${x.basedOn?'元にした案件：'+esc(x.basedOn):''}</div>`:''}
     <div class="acts">
-      <button class="sm primary" onclick="libReuse('${x.id}')">${x.kind==='template'?'このテンプレートで新規作成':'複製して新規作成'}</button>
+      ${canEdit()?`<button class="sm primary" onclick="libReuse('${x.id}')">${x.kind==='template'?'このテンプレートで新規作成':'複製して新規作成'}</button>`:''}
       ${isCur?'<span class="hint" style="margin-right:4px">いま開いています</span>':`<button class="sm" onclick="libOpen('${x.id}')">${x.kind==='template'?(mine?'テンプレートを編集':'テンプレートを見る'):(mine?'開いて編集':'開いて見る')}</button>`}
-      ${x.kind!=='template'?`<button class="sm" onclick="libToTemplate('${x.id}')">テンプレートに登録</button>`:(mine?`<button class="sm" onclick="libRename('${x.id}')">名前変更</button>`:'')}
+      ${!mine?'':x.kind!=='template'?`<button class="sm" onclick="libToTemplate('${x.id}')">テンプレートに登録</button>`:`<button class="sm" onclick="libRename('${x.id}')">名前変更</button>`}
       <button class="sm" onclick="libExport('${x.id}')">ファイルに保存</button>
       ${isOwner()?`<button class="ghost sm" onclick="libRemove('${x.id}')">削除</button>`:''}</div></div>`};
   const curE=curEntry();
   $('#main').innerHTML=`
   <div class="card"><h2>作業中</h2>
-    <div class="libgrid"><div class="libcard cur"><div class="nm">${esc(P.info.eventName||'（無題）')}<span class="inf">作成：${esc(curE?byName(curE):'自分')}${organizerOf(P)?`<i>｜</i>主催：${esc(organizerOf(P))}`:''}${curE?`<i>｜</i>最終更新：${fmtDate(curE.date)}`:''}${P.info.docDate?`<i>｜</i>発行日 ${esc(P.info.docDate)}`:''}${P.meta&&P.meta.templateId?'<b>テンプレートを編集中</b>':''}${curE&&!canEditEntry(curE)?`<b>${esc(curE.createdByName||'')}さんのデータ（閲覧のみ）</b>`:''}</span></div>
-      <div class="acts"><button class="sm" onclick="saveNow()">保存</button><button class="sm primary" onclick="saveAsTemplate()">テンプレートとして保存</button></div></div></div>
-    <p class="hint" style="margin:8px 0 0">作業データは自動で共有に保存され、会社の全員がこの一覧から見られます。ほかの人のデータは「複製して新規作成」で自分のデータとして使えます。自分で作ったデータは本人が編集でき、削除はオーナーだけができます。</p></div>
+    <div class="libgrid"><div class="libcard cur"><div class="nm">${esc(P.info.eventName||'（無題）')}<span class="inf">作成：${esc(curE?byName(curE):'自分')}${organizerOf(P)?`<i>｜</i>主催：${esc(organizerOf(P))}`:''}${curE?`<i>｜</i>最終更新：${fmtDate(curE.date)}`:''}${P.info.docDate?`<i>｜</i>発行日 ${esc(P.info.docDate)}`:''}${P.meta&&P.meta.templateId?'<b>テンプレートを編集中</b>':''}${!canEdit()?'<b>閲覧のみ</b>':''}</span></div>
+      ${canEdit()?`<div class="acts"><button class="sm" onclick="saveNow()">保存</button><button class="sm primary" onclick="saveAsTemplate()">テンプレートとして保存</button></div>`:''}</div></div>
+    <p class="hint" style="margin:8px 0 0">${canEdit()?'作業データは自動で共有に保存され、メンバー全員がこの一覧から見られます。メンバーはどのデータも開いて編集できます。削除とメンバー管理はオーナーだけができます。':'閲覧のみの権限です。データを開いて見ること、ファイルに保存することができます。'}</p></div>
   <div class="card"><div class="libtools"><input type="text" id="libQ" placeholder="案件名・作成者で検索" value="${esc(LIBF.q)}" oninput="LIBF.q=this.value;clearTimeout(window._lq);window._lq=setTimeout(()=>{renderCloudLib();const i=$('#libQ');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
     <span class="seg">${[['all','すべて'],['mine','自分が作成'],['others','ほかの人が作成']].map(([k,l])=>`<button class="${LIBF.who===k?'on':''}" onclick="LIBF.who='${k}';renderCloudLib()">${l}</button>`).join('')}</span></div>
   <h2>テンプレート（${tpls.length}）</h2>${tpls.length?`<div class="libgrid">${tpls.map(card).join('')}</div>`:'<p class="hint">ありません。よく使う案件を開いて「テンプレートとして保存」すると、ここに並びます。</p>'}
   <h2 style="margin-top:18px">作業データ（${hist.length}）</h2>${hist.length?`<div class="libgrid">${hist.map(card).join('')}</div>`:'<p class="hint">ありません。</p>'}</div>
   ${isOwner()?`<div class="card"><h2>メンバー（オーナーのみ表示）</h2>
-    <p class="hint">@alonzo.jp のアカウントなら誰でもログインできます。招待リストにない人がログインすると、次にオーナーが開いたときにお知らせします。</p>
+    <p class="hint">メンバーに入っている人だけが作業データを見られます。メンバー外の人がログインすると、次にオーナーが開いたときにお知らせします。</p>
     <div id="memList" class="memList"></div>
-    <div class="memgrid"><label class="f"><span>招待リスト（1行に1人のメールアドレス）</span><textarea id="memInv">${esc((roles.invited||[]).join('\n'))}</textarea></label>
-    <label class="f"><span>オーナー（削除・メンバー管理ができる人）</span><textarea id="memOwn">${esc((roles.owners||[]).join('\n'))}</textarea></label></div>
-    <div style="display:flex;gap:8px"><button class="primary" onclick="saveMembers()">メンバーを保存</button><button onclick="loadLogins()">最近のログインを見る</button></div>
+    <div class="memadd"><label class="f"><span>招待するメールアドレス（1行に1人・@alonzo.jp）</span><textarea id="memAdd" placeholder="例）yamada@alonzo.jp"></textarea></label>
+      <div class="memaddR"><label class="f"><span>権限</span><select id="memAddRole"><option value="edit">閲覧・編集</option><option value="view">閲覧のみ</option><option value="owner">オーナー</option></select></label>
+      <button class="primary" onclick="addMembers()">メンバーを追加する</button></div></div>
+    <h3 class="memh">作業メンバー</h3><div id="memTable"></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button onclick="loadLogins()">最近のログインを見る</button></div>
     <ul id="loginLog"></ul></div>`:''}`;
   if(isOwner())fillMembers();
 }
@@ -35812,12 +35855,18 @@ async function memberNames(){
   try{const s=await fdb.collection('logins').orderBy('at','desc').limit(300).get();s.forEach(d=>{const r=d.data();if(r.email&&r.name&&!m[r.email])m[r.email]=r.name})}catch(e){}
   MEMNAMES={map:m,at:Date.now()};return m;
 }
+const ROLE_L={owner:'オーナー',edit:'閲覧・編集',view:'閲覧のみ'};
 async function fillMembers(){
   const el=$('#memList');if(!el)return;const m=await memberNames();
-  const chip=(e,own)=>`<span class="mchip ${own?'own':''}"><b>${esc(m[e]||'（まだログインしていません）')}</b><small>${esc(e)}</small>${e!==me.email?`<button class="ghost sm mmail" onclick="inviteMail(['${esc(e)}'])" title="この人に招待メールを送る（Gmailが開きます）">✉ 招待メール</button>`:''}</span>`;
-  const inv=(roles.invited||[]).filter(e=>!(roles.owners||[]).includes(e));
-  el.innerHTML=`<div class="mrow"><span class="mlab">オーナー（${(roles.owners||[]).length}名）</span>${(roles.owners||[]).map(e=>chip(e,true)).join('')}</div>
-    <div class="mrow"><span class="mlab">招待リスト（${inv.length}名）</span>${inv.length?inv.map(e=>chip(e,false)).join(''):'<span class="hint">なし</span>'}</div>`;
+  const nm=e=>m[e]||'（まだログインしていません）';
+  const chip=(e,own)=>`<span class="mchip ${own?'own':''}"><b>${esc(nm(e))}</b><small>${esc(e)}</small>${!own&&roleOf(e)==='view'?'<i>閲覧のみ</i>':''}</span>`;
+  const staff=[...roles.editors,...roles.viewers];
+  el.innerHTML=`<div class="mrow"><span class="mlab">オーナー</span>${roles.owners.map(e=>chip(e,true)).join('')}</div>
+    <div class="mrow"><span class="mlab">作業スタッフ</span>${staff.length?staff.map(e=>chip(e,false)).join(''):'<span class="hint">なし</span>'}</div>`;
+  const all=[...roles.owners,...staff];
+  $('#memTable').innerHTML=`<table class="memtbl"><thead><tr><th>名前</th><th>メールアドレス</th><th>権限</th><th></th></tr></thead><tbody>${all.map(e=>{const fx=FIXED_OWNERS.includes(e),r=roleOf(e);
+    return `<tr><td><b>${esc(nm(e))}</b></td><td class="hint">${esc(e)}</td><td>${fx?'<span class="pill">オーナー（固定）</span>':`<select onchange="setRole('${esc(e)}',this.value)">${['view','edit','owner'].map(k=>`<option value="${k}" ${r===k?'selected':''}>${ROLE_L[k]}</option>`).join('')}</select>`}</td>
+    <td class="ops">${e!==me.email?`<button class="ghost sm" onclick="inviteMail(['${esc(e)}'])" title="招待メールを送る（Gmailが開きます）">✉ 招待メール</button>`:''}${fx?'':`<button class="ghost sm" onclick="setRole('${esc(e)}','')">外す</button>`}</td></tr>`}).join('')}</tbody></table>`;
 }
 async function confirmLeave(){return confirm(CLOUD?'いま編集中のデータを閉じて切り替えます。よろしいですか？\n（編集内容は自動で共有に保存されています）':'いま編集中の内容を閉じて切り替えます。\n（いまの内容はライブラリに保存してから切り替えます）\nよろしいですか？')}
 async function libOpen(id){

@@ -1,22 +1,26 @@
 rules_version = '2';
 // A&L 運営マニュアル Maker 用ルール
 //  ・ログインできるのは @alonzo.jp の Google アカウントだけ
-//  ・全員が閲覧できる／自分で作ったデータは本人が更新できる／削除はオーナーだけ
+//  ・メンバー（config/roles）に入っている人だけが作業データを見られる
+//    owners＝オーナー（全権）／editors＝閲覧・編集／viewers＝閲覧のみ
+//  ・airi_ishida@alonzo.jp と info@alonzo.jp は常にオーナー
+//  ・削除とメンバー管理はオーナーだけ
 service cloud.firestore {
   match /databases/{db}/documents {
     function signedIn() {
       return request.auth != null && request.auth.token.email_verified == true
         && request.auth.token.email.matches('.*@alonzo[.]jp$');
     }
-    function me() { return request.auth.token.email; }
+    function me() { return request.auth.token.email.lower(); }
     function rolesDoc() { return /databases/$(db)/documents/config/roles; }
+    function rl(k) { return exists(rolesDoc()) ? get(rolesDoc()).data.get(k, []) : []; }
     function isOwner() {
-      return signedIn() && (me() == 'airi_ishida@alonzo.jp'
-        || (exists(rolesDoc()) && me() in get(rolesDoc()).data.owners));
+      return signedIn() && (me() in ['airi_ishida@alonzo.jp', 'info@alonzo.jp'] || me() in rl('owners'));
     }
-    function metaPath(id) { return /databases/$(db)/documents/lib/$(id); }
+    function canEdit() { return isOwner() || (signedIn() && me() in rl('editors')); }
+    function isMember() { return canEdit() || (signedIn() && me() in rl('viewers')); }
 
-    // メンバー（招待リスト・オーナー）
+    // メンバー（権限）
     match /config/{d} {
       allow read: if signedIn();
       allow write: if isOwner();
@@ -28,23 +32,20 @@ service cloud.firestore {
     }
     // 作業データの一覧情報
     match /lib/{id} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.createdBy == me();
-      allow update: if signedIn() && (isOwner() || resource.data.createdBy == me())
-        && request.resource.data.createdBy == resource.data.createdBy;
+      allow read: if isMember();
+      allow create: if canEdit() && request.resource.data.createdBy == me();
+      allow update: if canEdit() && request.resource.data.createdBy == resource.data.createdBy;
       allow delete: if isOwner();
     }
     // 作業データの本文（800KBごとに分割。ID は「一覧のID__番号」）
     match /libBody/{pid} {
-      allow read: if signedIn();
-      allow write: if signedIn() && (isOwner()
-        || !exists(metaPath(pid.split('__')[0]))
-        || get(metaPath(pid.split('__')[0])).data.createdBy == me());
+      allow read: if isMember();
+      allow write: if canEdit();
     }
     // 画像（内容から決まるIDで1枚ずつ。上書きはしない）
     match /img/{h} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.d is string;
+      allow read: if isMember();
+      allow create: if canEdit() && request.resource.data.d is string;
       allow delete: if isOwner();
     }
   }
