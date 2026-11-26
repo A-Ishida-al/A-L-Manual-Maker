@@ -250,7 +250,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-26</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-27</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -34556,7 +34556,7 @@ const NOTIFY_URL = ''; // 招待リスト外ログインのメール通知（App
 const OWNER0 = 'airi_ishida@alonzo.jp', DOMAIN = 'alonzo.jp';
 const CLOUD = !!FB_CONFIG && location.protocol === 'https:' && (() => { try { return window.self === window.top } catch (e) { return false } })();
 const SID = Math.random().toString(36).slice(2) + Date.now().toString(36); // この画面の識別（自分の保存で再読込しないため）
-let me = null, roles = { owners: [OWNER0], invited: [] }, fdb = null, CLIB = [], cloudReady = false, cloudNotified = false;
+let CLOUD_ERR = null, me = null, roles = { owners: [OWNER0], invited: [] }, fdb = null, CLIB = [], cloudReady = false, cloudNotified = false;
 const isOwner = () => !!(me && (me.email === OWNER0 || (roles.owners || []).includes(me.email)));
 const canEditEntry = (x) => !CLOUD || !x || isOwner() || !x.createdBy || !!(me && x.createdBy === me.email);
 const curEntryId = () => P && P.meta && !String(P.meta.id).startsWith('tpl_') ? 'h_' + P.meta.id : null;
@@ -34743,7 +34743,7 @@ async function onLogin(u) {
     } else if (first && id && !ent) cloudAuto(); // 端末にあったデータを共有に上げる
     roBar(); if (TAB === 'lib') renderLib();
     if (first) cloudStatus(ent && !canEditEntry(ent) ? '閲覧のみ' : '共有に保存済み');
-  }, (e) => toast('共有データを読み込めません（' + (e.code || e.message) + '）'));
+  }, (e) => { CLOUD_ERR = e.code || e.message; cloudStatus('共有に保存できていません（' + CLOUD_ERR + '）', true); toast('共有データを読み込めません（' + CLOUD_ERR + '）'); if (TAB === 'lib') renderLib(); });
 }
 function whoUI() { const w = $('#who'); if (w) w.textContent = CLOUD && me ? me.name + (isOwner() ? '（オーナー）' : '') : ''; const o = $('#bOut'); if (o) o.hidden = !(CLOUD && me) }
 function checkInvite() {
@@ -35678,6 +35678,10 @@ async function renderLib(){
 // 共有モードの作業データ一覧（全員のデータ）
 let LIBF={q:'',who:'all'};
 function renderCloudLib(){
+  if(CLOUD_ERR&&!cloudReady){$('#main').innerHTML=`<div class="card" style="border-color:var(--red)"><h2 style="color:var(--red)">共有データベースに接続できません</h2>
+    <p>エラー：<code>${esc(CLOUD_ERR)}</code></p>
+    <p>${CLOUD_ERR==='permission-denied'?'Firebaseのアクセスルールがまだ公開されていないか、内容が違う可能性があります。オーナーがFirebaseの「Firestore Database」→「ルール」に、アプリ用のルールを貼り付けて「公開」してください。':'通信状態を確認して、ページを再読み込みしてください。'}</p>
+    <p class="hint">いま作業中の内容は、このパソコンのブラウザ内に保存されています（消えていません）。接続できるようになると、自動で共有に保存されます。念のため「ファイル ▾」→「作業データをファイルに書き出す」でバックアップもできます。</p></div>`;return}
   if(!me||!cloudReady){$('#main').innerHTML='<div class="card"><p class="hint">共有データを読み込んでいます…</p></div>';return}
   const curId=curEntryId();
   const q=LIBF.q.trim().toLowerCase();
