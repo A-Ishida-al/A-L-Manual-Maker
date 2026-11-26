@@ -183,8 +183,11 @@ body:not(.cloud) .cloudOnly{display:none!important}
 .libcard .by{font-size:11px;color:#555}
 .memgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.memgrid textarea{min-height:110px;font-size:12px}
 #loginLog{list-style:none;padding:0;margin:6px 0 0;max-height:220px;overflow:auto;font-size:12px}#loginLog li{padding:3px 0;border-bottom:1px solid #f0f0f0}
-.libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-.libcard{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff;display:flex;flex-direction:column;gap:6px}
+.libgrid{display:flex;flex-direction:column;gap:8px}
+.libcard{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#fff;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:18px;row-gap:3px;align-items:center}
+.libcard>.nm,.libcard>.by,.libcard>.mt{grid-column:1}
+.libcard>.acts{grid-column:2;grid-row:1 / span 3;margin-top:0!important;justify-content:flex-end;align-items:center}
+@media (max-width:900px){.libcard{grid-template-columns:1fr}.libcard>.acts{grid-column:1;grid-row:auto;justify-content:flex-start}}
 .libcard.cur{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
 .libcard .nm{font-weight:700;font-size:14px}
 .libcard .mt{font-size:11px;color:var(--sub);line-height:1.6}
@@ -250,7 +253,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-27</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-28</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -35669,11 +35672,10 @@ async function renderLib(){
   $('#main').innerHTML=`
   <div class="card"><h2>いま編集中の案件</h2><div class="curbar">
     <b>${esc(P.info.eventName||'（無題）')}</b>${P.meta&&P.meta.templateId?'<span class="pill">テンプレートを編集中</span>':''}${P.meta&&P.meta.basedOn?`<span class="pill">元：${esc(P.meta.basedOn)}</span>`:''}<span class="hint">${(P.sections||[]).length}ページ構成・香盤表${P.schedule.days.length}日・書体 ${esc(P.fonts.ja)}</span><span style="flex:1"></span>
-    <button onclick="saveToHistoryNow()">ライブラリに保存</button><button class="primary" onclick="saveAsTemplate()">テンプレートとして保存</button></div>
-    <p class="hint" style="margin:8px 0 0">運営マニュアル・香盤表をWord書き出しすると、その時点の内容が自動で「書き出し履歴」に記憶されます（同じ案件は最新の状態に上書き）。<br>
-    ライブラリはこのパソコンのこのブラウザ内に保存されます。別のPCで使う・共有する場合は「ファイル ▾」→「作業データをファイルに書き出す」で書き出して、「ファイルから開く」で読み込んでください。</p></div>
+    <button onclick="saveNow()">保存</button><button class="primary" onclick="saveAsTemplate()">テンプレートとして保存</button></div>
+    <p class="hint" style="margin:8px 0 0">作業内容は自動でこの一覧に保存されます（「保存」ボタンでその場で保存）。この一覧はこのパソコンのこのブラウザ内に保存されます。会社のみんなと共有する場合は、公開URL版（https://a-ishida-al.github.io/A-L-Manual-Maker/）を使ってください。</p></div>
   <div class="card"><h2>テンプレート（${tpls.length}）</h2>${tpls.length?`<div class="libgrid">${tpls.map(card).join('')}</div>`:'<p class="hint">まだありません。よく使う案件を開いて「テンプレートとして保存」すると、ここに並びます。</p>'}</div>
-  <div class="card"><h2>書き出し履歴（過去の案件）（${hist.length}）</h2>${hist.length?`<div class="libgrid">${hist.map(card).join('')}</div>`:'<p class="hint">まだありません。Word書き出しをすると自動で記憶されます。</p>'}</div>`;
+  <div class="card"><h2>作業データ（${hist.length}）</h2>${hist.length?`<div class="libgrid">${hist.map(card).join('')}</div>`:'<p class="hint">まだありません。Word書き出しをすると自動で記憶されます。</p>'}</div>`;
 }
 // 共有モードの作業データ一覧（全員のデータ）
 let LIBF={q:'',who:'all'};
