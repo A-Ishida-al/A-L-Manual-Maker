@@ -190,6 +190,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 .memList{margin:6px 0 12px;display:flex;flex-direction:column;gap:8px}
 .mrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.mlab{font-size:12px;font-weight:700;min-width:120px}
 .mchip{display:inline-flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:#fff;line-height:1.3}
+.mchip .mmail{font-size:10.5px;padding:1px 4px;margin-top:2px;align-self:flex-start;color:var(--red)}
 .mchip.own{border-color:var(--red);background:#fff6f6}.mchip b{font-size:12.5px}.mchip small{font-size:10.5px;color:#777}
 .memgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.memgrid textarea{min-height:110px;font-size:12px}
 #loginLog{list-style:none;padding:0;margin:6px 0 0;max-height:220px;overflow:auto;font-size:12px}#loginLog li{padding:3px 0;border-bottom:1px solid #f0f0f0}
@@ -264,7 +265,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-33</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-34</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -34785,7 +34786,13 @@ async function ownerAlert() {
 async function saveMembers() {
   const parse = (v) => [...new Set(v.split(/[\s,、]+/).map((x) => x.trim().toLowerCase()).filter((x) => x.includes('@')))];
   const owners = parse($('#memOwn').value); if (!owners.includes(OWNER0)) owners.unshift(OWNER0);
-  try { await fdb.collection('config').doc('roles').set({ owners, invited: parse($('#memInv').value), updatedBy: me.email }); MEMNAMES.at = 0; toast('メンバーを保存しました'); if (TAB === 'lib') renderLib() } catch (e) { toast('保存できませんでした（' + (e.code || e.message) + '）') }
+  const invited = parse($('#memInv').value);
+  const before = new Set([...(roles.owners || []), ...(roles.invited || [])]);
+  const added = [...new Set([...owners, ...invited])].filter((e) => !before.has(e) && e !== me.email);
+  try {
+    await fdb.collection('config').doc('roles').set({ owners, invited, updatedBy: me.email }); MEMNAMES.at = 0; toast('メンバーを保存しました'); if (TAB === 'lib') renderLib();
+    if (added.length && confirm('新しく追加した人に招待メールを送りますか？\n' + added.join('\n') + '\n\n（Gmailの作成画面が開きます。内容を確認して「送信」を押してください）')) inviteMail(added, owners);
+  } catch (e) { toast('保存できませんでした（' + (e.code || e.message) + '）') }
 }
 async function loadLogins() {
   const L = $('#loginLog'); L.innerHTML = '<li class="hint">読み込み中…</li>';
@@ -34793,6 +34800,29 @@ async function loadLogins() {
     const s = await fdb.collection('logins').orderBy('at', 'desc').limit(40).get(); const rows = []; s.forEach((d) => rows.push(d.data()));
     L.innerHTML = rows.map((r) => { const t = r.at && r.at.toDate ? r.at.toDate() : null, inv = r.email === OWNER0 || roles.owners.includes(r.email) || roles.invited.includes(r.email); return `<li><b>${esc(r.name || r.email)}</b> <span class="hint">${esc(r.email)}　${t ? esc(t.toLocaleString('ja-JP')) : ''}</span>${inv ? '' : ' <span class="pill" style="background:#fde8e8;color:var(--red)">招待外</span>'}</li>` }).join('') || '<li class="hint">まだ記録がありません</li>';
   } catch (e) { L.innerHTML = `<li class="hint">読み込めませんでした（${esc(e.code || e.message)}）</li>` }
+}
+
+// 招待メール：Gmailの作成画面を、宛先・件名・本文を入れた状態で開く（送信はユーザーが押す）
+const APP_URL = 'https://a-ishida-al.github.io/A-L-Manual-Maker/';
+function inviteMail(list, owners) {
+  owners = owners || roles.owners || [];
+  const anyOwner = list.some((e) => owners.includes(e));
+  const su = '【A&L】運営マニュアル Maker へのご招待';
+  const body = `お疲れさまです。${me ? me.name : ''}です。
+
+運営マニュアル・香盤表を作成・共有するアプリ「A&L 運営マニュアル Maker」にご招待します。
+下記のURLを開き、会社のGoogleアカウント（@alonzo.jp）でログインしてください。
+
+${APP_URL}
+
+・ログイン後、「★作業データ一覧」から、共有されている作業データを開けます。
+・新しく作る場合は「新規」→「★標準フォーマット（推奨）」から始めてください。黄色の〔 〕を入れ替え、点線の枠に画像を貼るだけで完成します。
+${anyOwner ? '・オーナーとして登録しているので、ほかの人の作業データの編集・削除、メンバーの管理もできます。\n' : ''}・パソコンのChromeで開くのがおすすめです。
+
+よろしくお願いします。`;
+  const u = 'https://mail.google.com/mail/?view=cm&fs=1' + (me ? '&authuser=' + encodeURIComponent(me.email) : '') + '&to=' + encodeURIComponent(list.join(',')) + '&su=' + encodeURIComponent(su) + '&body=' + encodeURIComponent(body);
+  const w = window.open(u, '_blank');
+  if (!w) toast('ポップアップがブロックされました。ブラウザの設定で、このサイトのポップアップを許可してください');
 }
 </script>
 <script>
@@ -35784,7 +35814,7 @@ async function memberNames(){
 }
 async function fillMembers(){
   const el=$('#memList');if(!el)return;const m=await memberNames();
-  const chip=(e,own)=>`<span class="mchip ${own?'own':''}"><b>${esc(m[e]||'（まだログインしていません）')}</b><small>${esc(e)}</small></span>`;
+  const chip=(e,own)=>`<span class="mchip ${own?'own':''}"><b>${esc(m[e]||'（まだログインしていません）')}</b><small>${esc(e)}</small>${e!==me.email?`<button class="ghost sm mmail" onclick="inviteMail(['${esc(e)}'])" title="この人に招待メールを送る（Gmailが開きます）">✉ 招待メール</button>`:''}</span>`;
   const inv=(roles.invited||[]).filter(e=>!(roles.owners||[]).includes(e));
   el.innerHTML=`<div class="mrow"><span class="mlab">オーナー（${(roles.owners||[]).length}名）</span>${(roles.owners||[]).map(e=>chip(e,true)).join('')}</div>
     <div class="mrow"><span class="mlab">招待リスト（${inv.length}名）</span>${inv.length?inv.map(e=>chip(e,false)).join(''):'<span class="hint">なし</span>'}</div>`;
