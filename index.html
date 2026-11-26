@@ -260,7 +260,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-31</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-32</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -34670,6 +34670,7 @@ const CSAVE = { timer: null, busy: false, last: '', json: {}, roShown: false };
 function cloudStatus(t, bad) { const s = $('#cloudSt'); if (s) { s.textContent = t; s.classList.toggle('bad', !!bad) } }
 function cloudAuto() {
   if (!(CLOUD && me && cloudReady) || !curEntryId()) return;
+  if (P.meta && P.meta.pristine) return; // 開いただけの白紙（まだ何も入力していない）は共有に保存しない
   const ent = curEntry(); if (ent && !canEditEntry(ent)) { roBar(); return }
   clearTimeout(CSAVE.timer); CSAVE.timer = setTimeout(cloudAutoRun, 2000); cloudStatus('保存待ち…');
 }
@@ -34677,6 +34678,7 @@ async function cloudAutoRun(force) {
   CSAVE.timer = null;
   if (!(CLOUD && me && cloudReady)) return;
   const id = curEntryId(); if (!id) return;
+  if (P.meta && P.meta.pristine) return;
   if (CSAVE.busy) { CSAVE.timer = setTimeout(cloudAutoRun, 800); return }
   const ent = CLIB.find((x) => x.id === id);
   if (ent && !canEditEntry(ent)) { roBar(); return }
@@ -34805,7 +34807,7 @@ let saveTimer, DB=null;
 function idb(){return new Promise((res)=>{try{const r=indexedDB.open('omg_db',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)}catch(e){res(null)}})}
 function idbGet(k){return new Promise((res)=>{if(!DB)return res(null);const t=DB.transaction('kv').objectStore('kv').get(k);t.onsuccess=()=>res(t.result||null);t.onerror=()=>res(null)})}
 function idbPut(k,v){return new Promise((res,rej)=>{if(!DB)return rej();const tx=DB.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=res;tx.onerror=rej})}
-function save(){if(!UNDO_APPLY)localAuto();clearTimeout(window._bt);window._bt=setTimeout(()=>{if(TAB==='manual')renderSecListBadges()},500);if(!UNDO_APPLY)undoLater();if(CLOUD&&!UNDO_APPLY)cloudAuto();else if(CLOUD&&UNDO_APPLY&&me&&cloudReady)cloudAuto();clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const js=JSON.stringify(P);try{await idbPut(LS_KEY,js);try{localStorage.removeItem(LS_KEY)}catch(e){}}catch(e){try{localStorage.setItem(LS_KEY,js)}catch(e2){toast('自動保存できませんでした。「作業データを保存」でファイル保存してください')}}},300)}
+function save(){if(!UNDO_APPLY&&P&&P.meta&&P.meta.pristine)delete P.meta.pristine;if(!UNDO_APPLY)localAuto();clearTimeout(window._bt);window._bt=setTimeout(()=>{if(TAB==='manual')renderSecListBadges()},500);if(!UNDO_APPLY)undoLater();if(CLOUD&&!UNDO_APPLY)cloudAuto();else if(CLOUD&&UNDO_APPLY&&me&&cloudReady)cloudAuto();clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const js=JSON.stringify(P);try{await idbPut(LS_KEY,js);try{localStorage.removeItem(LS_KEY)}catch(e){}}catch(e){try{localStorage.setItem(LS_KEY,js)}catch(e2){toast('自動保存できませんでした。「作業データを保存」でファイル保存してください')}}},300)}
 async function load(){DB=await idb();try{const s=(await idbGet(LS_KEY))||localStorage.getItem(LS_KEY);if(s)return JSON.parse(s)}catch(e){}return null}
 
 // ---------- 初期化 ----------
@@ -34815,7 +34817,7 @@ async function init(){
   $$('#tabs button[data-t]').forEach(b=>b.onclick=()=>{TAB=b.dataset.t;localStorage.setItem(LS_TAB,TAB);render()});
   $('#newTpl').innerHTML=Object.entries(OMTpl.TEMPLATES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
   if(CLOUD)initCloud();
-  if(!P){P=ensureMeta(OMTpl.newProject('standard','generic'));save();render();undoCommit();if(!CLOUD)openFontModal();return}
+  if(!P){P=ensureMeta(OMTpl.newProject('standard','generic'));UNDO_APPLY=true;save();UNDO_APPLY=false;P.meta.pristine=true;render();undoCommit();if(!CLOUD)openFontModal();return}
   ensureMeta(P);render();undoCommit();
 }
 async function newProjectDlg(){
@@ -35744,7 +35746,7 @@ function renderCloudLib(){
     ${x.kind==='template'&&x.event&&x.event!==x.name||x.basedOn?`<div class="mt">${x.kind==='template'&&x.event&&x.event!==x.name?'元の案件：'+esc(x.event)+'　':''}${x.basedOn?'元にした案件：'+esc(x.basedOn):''}</div>`:''}
     <div class="acts">
       <button class="sm primary" onclick="libReuse('${x.id}')">${x.kind==='template'?'このテンプレートで新規作成':'複製して新規作成'}</button>
-      ${isCur?'':`<button class="sm" onclick="libOpen('${x.id}')">${x.kind==='template'?(mine?'テンプレートを編集':'テンプレートを見る'):(mine?'開いて編集':'開いて見る')}</button>`}
+      ${isCur?'<span class="hint" style="margin-right:4px">いま開いています</span>':`<button class="sm" onclick="libOpen('${x.id}')">${x.kind==='template'?(mine?'テンプレートを編集':'テンプレートを見る'):(mine?'開いて編集':'開いて見る')}</button>`}
       ${x.kind!=='template'?`<button class="sm" onclick="libToTemplate('${x.id}')">テンプレートに登録</button>`:(mine?`<button class="sm" onclick="libRename('${x.id}')">名前変更</button>`:'')}
       <button class="sm" onclick="libExport('${x.id}')">ファイルに保存</button>
       ${isOwner()?`<button class="ghost sm" onclick="libRemove('${x.id}')">削除</button>`:''}</div></div>`};
