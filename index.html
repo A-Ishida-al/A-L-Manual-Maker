@@ -103,6 +103,7 @@ th.colh{cursor:grab}th.colh:hover{background:#e2e2e2}
 .slotTile{width:220px;cursor:pointer}.slotBox{height:130px;border:2px dashed #b5b5b5;border-radius:8px;background:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;padding:8px;font-size:12px;color:#555}
 .slotBox b{background:#FFF200;padding:1px 4px;border-radius:3px}.slotBox small{color:#888;font-size:10.5px;line-height:1.5}
 .slotTile.on .slotBox,.slotTile.drag .slotBox,.slotTile:hover .slotBox{border-color:var(--red);background:#fff5f5}
+.ovimgAdd{display:flex;gap:8px;align-items:center;margin-top:5px}.ovimgAdd .hint{font-size:10.5px}
 .slotCap{font-size:10.5px;color:#666;margin-top:2px}
 .todo{border:1px solid #e9d36a;background:#fffbe6}.todo h2{color:#7a5b00}
 .todo .tr{display:grid;grid-template-columns:minmax(160px,1fr) 2fr auto;gap:8px;align-items:center;margin:4px 0}
@@ -249,7 +250,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-24</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-25</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -31186,7 +31187,7 @@ MAX: 9026 };
           { label: '会場', value: '{{会場名}}\n〒{{会場住所}}' }, { label: '主催', value: '{{主催}}' },
           { label: '制作・運営', value: 'A&L Project株式会社' }, { label: '実施内容', value: '〔イベントの内容を1〜2行で〕' },
           { label: '参加・入場', value: '〔例：事前抽選による当選者 〇〇名（入場無料）〕' }, { label: '出演', value: '〔出演者・MC（敬称略）〕' },
-          { label: 'スタッフ集合', value: '〔集合時間〕　〔集合場所〕' },
+          { label: 'スタッフ集合', value: '〔集合時間〕　〔集合場所〕', images: [{ slot: '集合場所の地図', w: 16, h: 9 }] },
           { label: '服装', value: '〔例：スタッフT（貸与）／黒無地パンツ／華美でないスニーカー〕' },
         ] : [
           { label: '名称', value: '' }, { label: '主催', value: '' }, { label: '出展社', value: '' },
@@ -31607,7 +31608,9 @@ MAX: 9026 };
       const rows = (project.info.overview || []).filter((r) => r.label || r.value).map((r) => new TableRow({
         children: [
           cell([P([R('■ ' + r.label, { bold: true })])], { w: lw, valign: VerticalAlign.TOP, ml: 0, mt: 30, mb: 30 }),
-          cell(sub(r.value, V).split('\n').map((t) => P(inlineRuns(t))), { w: CW - lw, valign: VerticalAlign.TOP, mt: 30, mb: 30 }),
+          cell([...sub(r.value, V).split('\n').map((t) => P(inlineRuns(t))),
+            ...(r.images || []).filter((x) => x && (x.dataUrl || x.slot)).flatMap((im) => { const p = image(im, Math.round((CW - lw) * 0.72), Math.round(CH * 0.24), AlignmentType.LEFT); return p ? [spacer(60), p] : []; })],
+            { w: CW - lw, valign: VerticalAlign.TOP, mt: 30, mb: 30 }),
         ],
       }));
       const out = [];
@@ -34911,7 +34914,9 @@ function renderInfo(){
   <div class="card"><h2>実施概要</h2>
     <table class="ed"><tr><th style="width:180px">項目（■の後）</th><th>内容（改行可）</th><th style="width:110px"></th></tr>
     ${I.overview.map((r,i)=>`<tr data-dnd="ov" data-i="${i}"><td><input type="text" value="${esc(r.label)}" oninput="P.info.overview[${i}].label=this.value;save()"></td>
-      <td><textarea oninput="P.info.overview[${i}].value=this.value;save()" style="height:${Math.max(30,(r.value.split('\n').length)*20+12)}px">${esc(r.value)}</textarea></td>
+      <td><textarea oninput="P.info.overview[${i}].value=this.value;save()" style="height:${Math.max(30,(r.value.split('\n').length)*20+12)}px">${esc(r.value)}</textarea>
+        ${(r.images||[]).length?`<div class="imgs" style="margin-top:6px">${r.images.map((im,k)=>imgTile(im,'ovimg',k,i,`P.info.overview[${i}].images`)).join('')}</div>`:''}
+        <div class="ovimgAdd"><label class="btnl">＋ 画像を追加<input type="file" accept="image/*" multiple hidden onchange="ovAddImgs(${i},this)"></label><span class="hint">地図など。行をクリックして ⌘V でも貼り付けできます</span></div></td>
       <td style="white-space:nowrap"><span class="dh" draggable="true" title="ドラッグで並べ替え">⠿</span><button class="ghost" onclick="mv(P.info.overview,${i},-1)">↑</button><button class="ghost" onclick="mv(P.info.overview,${i},1)">↓</button><button class="ghost" onclick="P.info.overview.splice(${i},1);save();render()">×</button></td></tr>`).join('')}
     </table><button class="sm" onclick="P.info.overview.push({label:'',value:''});save();render()">＋ 行を追加</button>
     <p class="hint">注意事項（キャラもの禁止・撮影禁止など）は「マニュアル構成」→「実施概要」ページの本文で編集できます。</p>
@@ -35810,7 +35815,7 @@ function todoFields(s){
   return F;
 }
 function todoList(s){const out=[];todoFields(s).forEach((f,fi)=>{const t=String(f.get()||'');let m,n=0;TODO_RE.lastIndex=0;while((m=TODO_RE.exec(t))){out.push({f,fi,n:n++,label:m[0],ctx:t.slice(Math.max(0,m.index-18),m.index).split('\n').pop()})}});return out}
-function slotList(s){const out=[];const d=s.data||{};(d.images||[]).forEach(im=>{if(im&&im.slot&&!im.dataUrl)out.push(im)});(d.blocks||[]).forEach(b=>(b.images||[]).forEach(im=>{if(im&&im.slot&&!im.dataUrl)out.push(im)}));return out}
+function slotList(s){const out=[];const d=s.data||{};if(s.kind==='overview')(P.info.overview||[]).forEach(r=>(r.images||[]).forEach(im=>{if(im&&im.slot&&!im.dataUrl)out.push(im)}));(d.images||[]).forEach(im=>{if(im&&im.slot&&!im.dataUrl)out.push(im)});(d.blocks||[]).forEach(b=>(b.images||[]).forEach(im=>{if(im&&im.slot&&!im.dataUrl)out.push(im)}));return out}
 function todoCount(s){return todoList(s).length+slotList(s).length}
 function todoFill(fi,n,v){
   const s=curSec();const f=todoFields(s)[fi];if(!f||v==='')return;
@@ -35859,6 +35864,8 @@ document.addEventListener('mousedown',e=>{
   if(blk){PASTE_AT={kind:'blkAfter',bi:+blk.dataset.i,sec:SEL};return}
   const row=e.target.closest&&e.target.closest('tr[data-dnd="lrow"]');
   if(row){PASTE_AT={kind:'lrow',ri:+row.dataset.i,day:DAY};return}
+  const ovr=e.target.closest&&e.target.closest('tr[data-dnd="ov"]');
+  if(ovr){PASTE_AT={kind:'ovrow',i:+ovr.dataset.i};return}
   if(e.target.closest&&e.target.closest('#main'))PASTE_AT=null;
 },true);
 function clipImages(dt){const out=[];if(!dt)return out;for(const it of dt.items||[]){if(it.kind==='file'&&/^image\//.test(it.type)){const f=it.getAsFile();if(f)out.push(f)}}if(!out.length)for(const f of dt.files||[])if(/^image\//.test(f.type))out.push(f);return out}
@@ -35867,8 +35874,8 @@ async function putImages(files,at){
   const imgs=[];for(const f of files){try{imgs.push(await readImage(f))}catch(e){toast('画像を読み込めませんでした')}}
   if(!imgs.length)return true;
   at=at||PASTE_AT;
-  if(at&&at.kind==='slot'&&TAB==='manual'&&at.sec===SEL){
-    try{const A=(new Function('return '+at.arr))();const old=A[at.k]||{};A[at.k]={...imgs[0],slot:old.slot};if(imgs.length>1)A.splice(at.k+1,0,...imgs.slice(1));save();renderSecEd();toast('画像を入れました（「'+(old.slot===true?'画像':old.slot||'画像')+'」）');return true}catch(e){}
+  if(at&&at.kind==='slot'&&(TAB==='info'||(TAB==='manual'&&at.sec===SEL))){
+    try{const A=(new Function('return '+at.arr))();const old=A[at.k]||{};A[at.k]={...imgs[0],slot:old.slot};if(imgs.length>1)A.splice(at.k+1,0,...imgs.slice(1));save();reImgs();toast('画像を入れました（「'+(old.slot===true?'画像':old.slot||'画像')+'」）');return true}catch(e){}
   }
   if(TAB==='sched'){
     const d=P.schedule.days[DAY];
@@ -35890,7 +35897,9 @@ async function putImages(files,at){
     }
     toast('このページの種類には画像を入れられません。「自由ページ（文章・表・画像）」か「画像」のページで貼り付けてください');return true;
   }
-  if(TAB==='info'){toast('ロゴは「表紙ロゴ」「ヘッダーロゴ」のファイル選択から入れてください');return true}
+  if(TAB==='info'){
+    if(at&&at.kind==='ovrow'&&P.info.overview[at.i]){const r=P.info.overview[at.i];r.images=r.images||[];const si=r.images.findIndex(x=>x.slot&&!x.dataUrl);if(si>=0){r.images[si]={...imgs[0],slot:r.images[si].slot};r.images.push(...imgs.slice(1))}else r.images.push(...imgs);save();render();toast('「'+(r.label||'')+'」に画像を入れました');return true}
+    toast('画像を入れたい実施概要の行をクリックしてから ⌘V を押してください（ロゴは「表紙ロゴ」「ヘッダーロゴ」から）');return true}
   toast('画像は「マニュアル構成」のページか、リスト型の香盤表の行に貼り付けられます');return true;
 }
 document.addEventListener('paste',async e=>{
@@ -35924,7 +35933,7 @@ document.addEventListener('drop',async e=>{
   const st=e.target.closest&&e.target.closest('.slotTile');
   if(st)at={kind:'slot',arr:st.dataset.slotarr,k:+st.dataset.k,sec:SEL};
   else if(z)at={kind:z.dataset.paste,bi:z.dataset.bi!=null?+z.dataset.bi:null,sec:SEL};
-  else{const blk=e.target.closest('[data-dnd="mblk"]');if(blk)at={kind:'blkAfter',bi:+blk.dataset.i,sec:SEL};const row=e.target.closest('tr[data-dnd="lrow"]');if(row)at={kind:'lrow',ri:+row.dataset.i}}
+  else{const blk=e.target.closest('[data-dnd="mblk"]');if(blk)at={kind:'blkAfter',bi:+blk.dataset.i,sec:SEL};const row=e.target.closest('tr[data-dnd="lrow"]');if(row)at={kind:'lrow',ri:+row.dataset.i};const ovr=e.target.closest('tr[data-dnd="ov"]');if(ovr)at={kind:'ovrow',i:+ovr.dataset.i}}
   await putImages(files,at);
 });
 // =========================================================
@@ -35937,6 +35946,7 @@ const DND={
     d.rows.forEach(r=>{if((r.kind||'item')!=='item')return;const c=r.cells||(r.cells=[]);while(c.length<n)c.push('');arrMove(c,f,t)});save();renderSched()},
   gcol:(f,t)=>{const d=P.schedule.days[DAY];const order=d.columns.map((_,i)=>i);if(!arrMove(order,f,t))return;
     d.columns=order.map(i=>d.columns[i]);d.blocks.forEach(b=>{b.col=order.indexOf(+b.col)});save();renderSched()},
+  ovimg:(f,t,a)=>{if(arrMove(P.info.overview[+a].images,f,t)){save();render()}},
   simg:(f,t)=>{if(arrMove(curSec().data.images,f,t)){save();renderSecEd()}},
   bimg:(f,t,a)=>{if(arrMove(curSec().data.blocks[+a].images,f,t)){save();renderSecEd()}},
   linfo:(f,t)=>{if(arrMove(LD().info,f,t)){save();renderSched()}},
@@ -35954,9 +35964,11 @@ function dndClear(){$$('.drop-before,.drop-after,.drop-left,.drop-right,.dropok'
 function imgTile(im,key,k,a,arr){
   if(im.slot&&!im.dataUrl)return `<div class="im slotTile" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''} data-slotarr="${arr}" data-k="${k}" title="クリックしてから ⌘V でスクリーンショットを貼り付け／画像ファイルをドラッグ">
     <div class="slotBox"><b>〔画像：${esc(im.slot===true?'差し替え':im.slot)}〕</b><small>クリックして ⌘V で貼り付け<br>または画像をここにドラッグ</small></div>
-    <div class="imops"><label class="btnl">画像を選ぶ<input type="file" accept="image/*" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像枠を削除しますか？')){${arr}.splice(${k},1);save();renderSecEd()}">枠を削除</button></div></div>`;
-  return `<div class="im" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''}><img src="${im.dataUrl}" draggable="false">${im.slot?`<div class="slotCap">${esc(im.slot===true?'':im.slot)}</div>`:''}<div class="imops"><label class="sm btnl">差し替え<input type="file" accept="image/*" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像を削除しますか？')){${arr}.splice(${k},1);save();renderSecEd()}">削除</button></div></div>`}
-async function imgReplace(arr,k,inp){const f=inp.files[0];if(!f)return;try{const old=arr[k]||{};arr[k]=await readImage(f);if(old.slot)arr[k].slot=old.slot;save();renderSecEd();toast('画像を差し替えました')}catch(e){toast('画像を読み込めませんでした')}}
+    <div class="imops"><label class="btnl">画像を選ぶ<input type="file" accept="image/*" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像枠を削除しますか？')){${arr}.splice(${k},1);save();reImgs()}">枠を削除</button></div></div>`;
+  return `<div class="im" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''}><img src="${im.dataUrl}" draggable="false">${im.slot?`<div class="slotCap">${esc(im.slot===true?'':im.slot)}</div>`:''}<div class="imops"><label class="sm btnl">差し替え<input type="file" accept="image/*" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像を削除しますか？')){${arr}.splice(${k},1);save();reImgs()}">削除</button></div></div>`}
+async function ovAddImgs(i,inp){const r=P.info.overview[i];r.images=r.images||[];for(const f of inp.files){try{r.images.push(await readImage(f))}catch(e){toast('画像を読み込めませんでした')}}save();render();toast('画像を追加しました')}
+function reImgs(){if(TAB==='manual')reImgs();else render()}
+async function imgReplace(arr,k,inp){const f=inp.files[0];if(!f)return;try{const old=arr[k]||{};arr[k]=await readImage(f);if(old.slot)arr[k].slot=old.slot;save();reImgs();toast('画像を差し替えました')}catch(e){toast('画像を読み込めませんでした')}}
 document.addEventListener('dragstart',e=>{
   const ch=e.target.closest&&e.target.closest('.ch');
   if(ch){const td=ch.closest('td[data-cell]');DRAG={cell:td.dataset.cell.split(',').map(Number)};td.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','c');e.dataTransfer.setDragImage(td,10,10)}catch(x){}return}
