@@ -254,7 +254,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-29</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-30</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -35671,9 +35671,9 @@ async function renderLib(){
       <button class="sm" onclick="libExport('${x.id}')">.json</button>
       <button class="ghost sm" onclick="libRemove('${x.id}')">削除</button></div></div>`};
   $('#main').innerHTML=`
-  <div class="card"><h2>いま編集中の案件</h2><div class="curbar">
-    <b>${esc(P.info.eventName||'（無題）')}</b>${P.meta&&P.meta.templateId?'<span class="pill">テンプレートを編集中</span>':''}${P.meta&&P.meta.basedOn?`<span class="pill">元：${esc(P.meta.basedOn)}</span>`:''}<span class="hint">${(P.sections||[]).length}ページ構成・香盤表${P.schedule.days.length}日・書体 ${esc(P.fonts.ja)}</span><span style="flex:1"></span>
-    <button onclick="saveNow()">保存</button><button class="primary" onclick="saveAsTemplate()">テンプレートとして保存</button></div>
+  <div class="card"><h2>作業中</h2>
+    <div class="libgrid"><div class="libcard cur"><div class="nm">${esc(P.info.eventName||'（無題）')}<span class="inf">${organizerOf(P)?`主催：${esc(organizerOf(P))}<i>｜</i>`:''}${P.meta&&P.meta.updated?`最終更新：${fmtDate(P.meta.updated)}`:''}${P.info.docDate?`<i>｜</i>発行日 ${esc(P.info.docDate)}`:''}${P.meta&&P.meta.templateId?'<b>テンプレートを編集中</b>':''}${P.meta&&P.meta.basedOn?`<i>｜</i>元：${esc(P.meta.basedOn)}`:''}</span></div>
+      <div class="acts"><button class="sm" onclick="saveNow()">保存</button><button class="sm primary" onclick="saveAsTemplate()">テンプレートとして保存</button></div></div></div>
     <p class="hint" style="margin:8px 0 0">作業内容は自動でこの一覧に保存されます（「保存」ボタンでその場で保存）。この一覧はこのパソコンのこのブラウザ内に保存されます。会社のみんなと共有する場合は、公開URL版（https://a-ishida-al.github.io/A-L-Manual-Maker/）を使ってください。</p></div>
   <div class="card"><h2>テンプレート（${tpls.length}）</h2>${tpls.length?`<div class="libgrid">${tpls.map(card).join('')}</div>`:'<p class="hint">まだありません。よく使う案件を開いて「テンプレートとして保存」すると、ここに並びます。</p>'}</div>
   <div class="card"><h2>作業データ（${hist.length}）</h2>${hist.length?`<div class="libgrid">${hist.map(card).join('')}</div>`:'<p class="hint">まだありません。Word書き出しをすると自動で記憶されます。</p>'}</div>`;
@@ -35706,9 +35706,9 @@ function renderCloudLib(){
       ${isOwner()?`<button class="ghost sm" onclick="libRemove('${x.id}')">削除</button>`:''}</div></div>`};
   const curE=curEntry();
   $('#main').innerHTML=`
-  <div class="card"><h2>いま開いているデータ</h2><div class="curbar">
-    <b>${esc(P.info.eventName||'（無題）')}</b>${P.meta&&P.meta.templateId?'<span class="pill">テンプレートを編集中</span>':''}${curE&&!canEditEntry(curE)?`<span class="pill">${esc(curE.createdByName||'')}さんのデータ（閲覧のみ）</span>`:''}<span class="hint">${(P.sections||[]).length}ページ構成・香盤表${P.schedule.days.length}日・書体 ${esc(P.fonts.ja)}</span><span style="flex:1"></span>
-    <button class="primary" onclick="saveAsTemplate()">テンプレートとして保存</button></div>
+  <div class="card"><h2>作業中</h2>
+    <div class="libgrid"><div class="libcard cur"><div class="nm">${esc(P.info.eventName||'（無題）')}<span class="inf">作成：${esc(curE?byName(curE):'自分')}${organizerOf(P)?`<i>｜</i>主催：${esc(organizerOf(P))}`:''}${curE?`<i>｜</i>最終更新：${fmtDate(curE.date)}`:''}${P.info.docDate?`<i>｜</i>発行日 ${esc(P.info.docDate)}`:''}${P.meta&&P.meta.templateId?'<b>テンプレートを編集中</b>':''}${curE&&!canEditEntry(curE)?`<b>${esc(curE.createdByName||'')}さんのデータ（閲覧のみ）</b>`:''}</span></div>
+      <div class="acts"><button class="sm" onclick="saveNow()">保存</button><button class="sm primary" onclick="saveAsTemplate()">テンプレートとして保存</button></div></div></div>
     <p class="hint" style="margin:8px 0 0">作業データは自動で共有に保存され、会社の全員がこの一覧から見られます。ほかの人のデータは「複製して新規作成」で自分のデータとして使えます。自分で作ったデータは本人が編集でき、削除はオーナーだけができます。</p></div>
   <div class="card"><div class="libtools"><input type="text" id="libQ" placeholder="案件名・作成者で検索" value="${esc(LIBF.q)}" oninput="LIBF.q=this.value;clearTimeout(window._lq);window._lq=setTimeout(()=>{renderCloudLib();const i=$('#libQ');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
     <span class="seg">${[['all','すべて'],['mine','自分が作成'],['others','ほかの人が作成']].map(([k,l])=>`<button class="${LIBF.who===k?'on':''}" onclick="LIBF.who='${k}';renderCloudLib()">${l}</button>`).join('')}</span></div>
