@@ -100,6 +100,12 @@ th.colh{cursor:grab}th.colh:hover{background:#e2e2e2}
 .kgrid td.blk{cursor:grab}.kgrid td.dragging{opacity:.4}
 .kgrid td.dropok{outline:2px dashed var(--red)!important;outline-offset:-2px;background:#fde8e8!important}
 #bugBtn{font-size:11px;padding:3px 8px;margin-right:8px;color:var(--sub);border:1px solid var(--line);border-radius:6px;background:#fff}#bugN{color:var(--red);font-weight:700;margin-left:3px}
+#pdfPickGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;max-height:60vh;overflow:auto;padding:2px}
+#pdfPickGrid .pp{border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;background:#fff}
+#pdfPickGrid .pp:has(input:checked){border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+#pdfPickGrid .ppimg{min-height:120px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#999}
+#pdfPickGrid .ppc{max-width:100%;max-height:190px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+#pdfPickGrid .ppno{font-size:12px}
 .slotTile{width:220px;cursor:pointer}.slotBox{height:130px;border:2px dashed #b5b5b5;border-radius:8px;background:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;padding:8px;font-size:12px;color:#555}
 .slotBox b{background:#FFF200;padding:1px 4px;border-radius:3px}.slotBox small{color:#888;font-size:10.5px;line-height:1.5}
 .slotTile.on .slotBox,.slotTile.drag .slotBox,.slotTile:hover .slotBox{border-color:var(--red);background:#fff5f5}
@@ -254,7 +260,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-30</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-31</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -401,6 +407,12 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <style id="pvPageStyle"></style>
 
 <div class="toast" id="toast"></div>
+<div class="modal" id="pdfPickModal"><div class="box" style="width:min(920px,94vw)">
+  <h3>PDFのページを選ぶ</h3><p class="hint" id="pdfPickHead"></p>
+  <div id="pdfPickAll" style="display:flex;gap:6px;margin-bottom:8px"><button class="sm" onclick="pdfPickAll(true)">すべて選択</button><button class="sm" onclick="pdfPickAll(false)">選択を解除</button></div>
+  <div id="pdfPickGrid"></div>
+  <div class="acts"><button onclick="pdfPickDone(false)">キャンセル</button><button class="primary" id="pdfPickOk" onclick="pdfPickDone(true)">追加</button></div>
+</div></div>
 <div class="modal" id="bugModal"><div class="box">
   <h3>不具合・気になる点を報告</h3>
   <p class="hint">何をしたら、どうなったか（期待していたこと）を書いて「報告ファイルを保存」を押してください。保存されたファイルとスクリーンショットをClaudeに送れば、原因を調べて直します。</p>
@@ -34866,6 +34878,38 @@ function delPreset(i){const pr=fontPresets();if(!confirm(pr[i].label+' を削除
 // =========================================================
 // 画像
 // =========================================================
+// 画像ファイル、またはPDF（ページを選んで画像にする）を読み込む。結果は画像の配列
+async function readImages(file,opt={}){
+  if(/pdf/i.test(file.type)||/\.pdf$/i.test(file.name))return pickPdfPages(file,opt);
+  return [await readImage(file)];
+}
+let PDFPICK=null;
+async function pickPdfPages(file,opt={}){
+  pdfInit();
+  const doc=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  const n=doc.numPages;
+  const render=async(i,maxPx)=>{const pg=await doc.getPage(i);const v1=pg.getViewport({scale:1});const sc=Math.min(3,maxPx/Math.max(v1.width,v1.height));const vp=pg.getViewport({scale:sc});const c=document.createElement('canvas');c.width=Math.ceil(vp.width);c.height=Math.ceil(vp.height);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);await pg.render({canvasContext:g,viewport:vp}).promise;return c};
+  const toImg=async(i)=>{const c=await render(i,2200);const url=c.width*c.height>900000?c.toDataURL('image/jpeg',0.9):c.toDataURL('image/png');return{dataUrl:url,w:c.width,h:c.height,name:file.name+' p'+i}};
+  let pages=[1];
+  if(n>1){
+    pages=await new Promise(async(res)=>{
+      PDFPICK={res,sel:new Set(opt.single?[1]:[]),single:!!opt.single,n};
+      $('#pdfPickHead').innerHTML=`<b>${esc(file.name)}</b> は <b>${n}</b> ページあります。${opt.single?'使うページを1つ選んでください。':'追加するページを選んでください（複数選べます）。'}`;
+      $('#pdfPickAll').style.display=opt.single?'none':'';
+      $('#pdfPickGrid').innerHTML=Array.from({length:n},(_,k)=>`<label class="pp" data-p="${k+1}"><span class="ppimg">読み込み中…</span><span class="ppno"><input type="checkbox" ${PDFPICK.sel.has(k+1)?'checked':''}> ${k+1}ページ</span></label>`).join('');
+      $$('#pdfPickGrid .pp input').forEach(cb=>cb.onchange=()=>{const p=+cb.closest('.pp').dataset.p;if(PDFPICK.single){PDFPICK.sel=new Set([p]);$$('#pdfPickGrid .pp input').forEach(x=>x.checked=x===cb)}else{cb.checked?PDFPICK.sel.add(p):PDFPICK.sel.delete(p)}pdfPickUI()});
+      pdfPickUI();openModal('pdfPickModal');
+      for(let i=1;i<=n;i++){if(!PDFPICK)break;try{const c=await render(i,240);const el=document.querySelector(`#pdfPickGrid .pp[data-p="${i}"] .ppimg`);if(el){el.textContent='';c.className='ppc';el.appendChild(c)}}catch(e){}}
+    });
+    if(!pages||!pages.length)return [];
+  }
+  toast(pages.length>1?`PDFの${pages.length}ページを画像にしています…`:'PDFを画像にしています…');
+  const out=[];for(const p of pages)out.push(await toImg(p));
+  return out;
+}
+function pdfPickUI(){const k=PDFPICK.sel.size;$('#pdfPickOk').textContent=PDFPICK.single?'このページを使う':(k?`選んだ ${k} ページを追加`:'ページを選んでください');$('#pdfPickOk').disabled=!k}
+function pdfPickAll(on){$$('#pdfPickGrid .pp input').forEach(cb=>{cb.checked=on;const p=+cb.closest('.pp').dataset.p;on?PDFPICK.sel.add(p):PDFPICK.sel.delete(p)});pdfPickUI()}
+function pdfPickDone(ok){const P2=PDFPICK;PDFPICK=null;closeModal('pdfPickModal');if(P2)P2.res(ok?[...P2.sel].sort((a,b)=>a-b):[])}
 function readImage(file){
   return new Promise((res,rej)=>{
     const fr=new FileReader();
@@ -34899,9 +34943,9 @@ function renderInfo(){
       <label class="f"><span>表紙のサブタイトル（1行ずつ）</span><textarea data-k="coverLines" style="min-height:60px">${esc((I.coverLines||[]).join('\n'))}</textarea></label>
       <div class="grid2">
         <div class="logoBox"><span class="hint">表紙ロゴ（作品ロゴなど）</span>${P.images.coverLogo?`<img src="${P.images.coverLogo.dataUrl}">`:''}
-          <input type="file" accept="image/*" onchange="setLogo('coverLogo',this)"> ${P.images.coverLogo?'<button class="sm" onclick="setLogo(\'coverLogo\')">削除</button>':''}</div>
+          <input type="file" accept="image/*,application/pdf,.pdf" onchange="setLogo('coverLogo',this)"> ${P.images.coverLogo?'<button class="sm" onclick="setLogo(\'coverLogo\')">削除</button>':''}</div>
         <div class="logoBox"><span class="hint">ヘッダー右上ロゴ（クライアントロゴ）</span>${P.images.headerLogo?`<img src="${P.images.headerLogo.dataUrl}">`:''}
-          <input type="file" accept="image/*" onchange="setLogo('headerLogo',this)"> ${P.images.headerLogo?'<button class="sm" onclick="setLogo(\'headerLogo\')">削除</button>':''}</div>
+          <input type="file" accept="image/*,application/pdf,.pdf" onchange="setLogo('headerLogo',this)"> ${P.images.headerLogo?'<button class="sm" onclick="setLogo(\'headerLogo\')">削除</button>':''}</div>
       </div>
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><span class="hint">表の見出し行の色（実施概要以外の表）：</span>
         <label class="hint">背景 <input type="color" value="#${(P.style&&P.style.tableHeadFill)||'D9D9D9'}" oninput="setStyle('tableHeadFill',this.value)"></label>
@@ -34920,7 +34964,7 @@ function renderInfo(){
     ${I.overview.map((r,i)=>`<tr data-dnd="ov" data-i="${i}"><td><input type="text" value="${esc(r.label)}" oninput="P.info.overview[${i}].label=this.value;save()"></td>
       <td><textarea oninput="P.info.overview[${i}].value=this.value;save()" style="height:${Math.max(30,(r.value.split('\n').length)*20+12)}px">${esc(r.value)}</textarea>
         ${(r.images||[]).length?`<div class="imgs" style="margin-top:6px">${r.images.map((im,k)=>imgTile(im,'ovimg',k,i,`P.info.overview[${i}].images`)).join('')}</div>`:''}
-        ${ovImgOK(r)?`<div class="ovimgAdd"><label class="btnl">＋ 画像を追加<input type="file" accept="image/*" multiple hidden onchange="ovAddImgs(${i},this)"></label><span class="hint">集合場所の地図など。行をクリックして ⌘V でも貼り付けできます</span></div>`:''}</td>
+        ${ovImgOK(r)?`<div class="ovimgAdd"><label class="btnl">＋ 画像を追加<input type="file" accept="image/*,application/pdf,.pdf" multiple hidden onchange="ovAddImgs(${i},this)"></label><span class="hint">集合場所の地図など。行をクリックして ⌘V でも貼り付けできます</span></div>`:''}</td>
       <td style="white-space:nowrap"><span class="dh" draggable="true" title="ドラッグで並べ替え">⠿</span><button class="ghost" onclick="mv(P.info.overview,${i},-1)">↑</button><button class="ghost" onclick="mv(P.info.overview,${i},1)">↓</button><button class="ghost" onclick="P.info.overview.splice(${i},1);save();render()">×</button></td></tr>`).join('')}
     </table><button class="sm" onclick="P.info.overview.push({label:'',value:''});save();render()">＋ 行を追加</button>
     <p class="hint">注意事項（キャラもの禁止・撮影禁止など）は「マニュアル構成」→「実施概要」ページの本文で編集できます。</p>
@@ -34929,7 +34973,7 @@ function renderInfo(){
 }
 async function setLogo(key,input){
   if(!input){P.images[key]=null;save();render();return}
-  const f=input.files[0];if(!f)return;P.images[key]=await readImage(f);save();render();
+  const f=input.files[0];if(!f)return;const a=await readImages(f,{single:true});if(!a.length)return;P.images[key]=a[0];save();render();
 }
 function mv(arr,i,d){const j=i+d;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];save();render()}
 
@@ -35159,7 +35203,7 @@ function renderSecEd(){
   else if(s.kind==='image')h+=`<div class="card"><h2>画像の上の文章（任意）</h2>${textField('before',d.before)}</div>
     <div class="card"><h2>画像（図面・地図など。ページ幅に合わせて自動縮小）</h2><div class="imgs">${(d.images||[]).map((im,k)=>imgTile(im,'simg',k,'',`curSec().data.images`)).join('')}</div>
       <div class="pasteZone" data-paste="sec"><b>スクリーンショットを貼り付け：</b>この枠をクリックして ⌘V（WindowsはCtrl+V）／画像ファイルをここにドラッグ<button class="sm" onclick="event.stopPropagation();pasteFromClipboard('sec')">クリップボードから貼り付け</button></div>
-      <input type="file" accept="image/*" multiple onchange="addImgs(this)" style="margin-top:8px"><p class="hint">複数枚入れると縦に並びます。</p></div>
+      <input type="file" accept="image/*,application/pdf,.pdf" multiple onchange="addImgs(this)" style="margin-top:8px"><p class="hint">複数枚入れると縦に並びます。</p></div>
     <div class="card"><h2>画像の下の文章（任意）</h2>${textField('after',d.after)}</div>`;
   else if(s.kind==='schedule')h+=`<div class="card"><h2>スケジュール（香盤表）</h2><p>「香盤表」タブの内容が、日程ごとに1ページずつ入ります（現在 <b>${P.schedule.days.length}</b> 日分）。</p>
     <p class="hint">ヘッダーは「スケジュール／日程タイトル」、表の下に【本日のポイント】の赤枠が入ります。</p><button onclick="TAB='sched';render()">香盤表を編集する →</button></div>`;
@@ -35218,7 +35262,7 @@ function blocksEditor(d){
     else if(b.type==='table')h+=tableEditor(b,bi);
     else if(b.type==='image')h+=`<div class="imgs">${(b.images||[]).map((im,k)=>imgTile(im,'bimg',k,bi,`curSec().data.blocks[${bi}].images`)).join('')}</div>
       <div class="row" style="margin-top:8px;align-items:center"><label class="f" style="flex:0 0 220px"><span>横幅（本文幅に対する％）</span><input type="number" min="10" max="100" step="5" value="${b.width||100}" oninput="curSec().data.blocks[${bi}].width=Number(this.value)||100;save()"></label>
-      <div class="hint">複数枚あると横に並びます。<br><input type="file" accept="image/*" multiple onchange="blkAddImgs(${bi},this)"></div></div>
+      <div class="hint">複数枚あると横に並びます。<br><input type="file" accept="image/*,application/pdf,.pdf" multiple onchange="blkAddImgs(${bi},this)"></div></div>
       <div class="pasteZone" data-paste="blk" data-bi="${bi}"><b>スクリーンショットを貼り付け：</b>この枠をクリックして ⌘V／画像ファイルをここにドラッグ<button class="sm" onclick="event.stopPropagation();pasteFromClipboard('blk',${bi})">クリップボードから貼り付け</button></div>`;
     else if(b.type==='schedule')h+=`<label class="f"><span>入れる日程</span><select onchange="curSec().data.blocks[${bi}].dayId=this.value;save()">${days.map(x=>`<option value="${x.id}" ${x.id===b.dayId?'selected':''}>${esc(x.title)}</option>`).join('')}</select></label>
       <p class="hint">この位置に香盤表が1ページで入ります。内容は「香盤表」タブで編集します。</p><button class="sm" onclick="DAY=Math.max(0,P.schedule.days.findIndex(x=>x.id==='${b.dayId}'));TAB='sched';render()">香盤表を編集する →</button>`;
@@ -35231,7 +35275,7 @@ function blocksEditor(d){
 function blkAdd(t){const bl=curSec().data.blocks;bl.push(t==='text'?{type:'text',body:'■ 見出し\n・本文'}:t==='table'?{type:'table',header:true,columns:[{name:'項目',w:2,align:'left'},{name:'内容',w:5,align:'left'}],rows:[['','']]}:t==='image'?{type:'image',images:[],width:100}:{type:'schedule',dayId:(P.schedule.days[0]||{}).id});save();renderSecEd()}
 function blkMv(i,dir){const a=curSec().data.blocks,j=i+dir;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();renderSecEd()}
 function blkDel(i){if(!confirm('このブロックを削除しますか？'))return;curSec().data.blocks.splice(i,1);save();renderSecEd()}
-async function blkAddImgs(bi,inp){const b=curSec().data.blocks[bi];b.images=b.images||[];for(const f of inp.files){try{b.images.push(await readImage(f))}catch(e){toast(f.name+' を読み込めませんでした')}}save();renderSecEd()}
+async function blkAddImgs(bi,inp){const b=curSec().data.blocks[bi];b.images=b.images||[];for(const f of inp.files){try{b.images.push(...await readImages(f))}catch(e){toast(f.name+' を読み込めませんでした')}}save();renderSecEd()}
 
 function tblCol(k,op,bi=null){const d=tblObj(bi);if(op==='add'){d.columns.push({name:'新しい列',w:1,align:'left'});}else{if(!confirm('この列を削除しますか？'))return;d.columns.splice(k,1);d.rows.forEach(r=>r.splice(k,1))}save();renderSecEd()}
 function tblRow(i,dir,bi=null){const r=tblObj(bi).rows,j=i+dir;if(j<0||j>=r.length)return;[r[i],r[j]]=[r[j],r[i]];save();renderSecEd()}
@@ -35239,7 +35283,7 @@ function doPaste(){const d=tblObj(PASTE_BI);const lines=$('#pasteArea').value.re
   const rows=lines.map(l=>l.split('\t'));if($('#pasteReplace').checked)d.rows=rows;else d.rows.push(...rows);
   const maxc=Math.max(0,...rows.map(r=>r.length));while(d.columns.length<maxc)d.columns.push({name:'列'+(d.columns.length+1),w:1,align:'left'});
   save();closeModal('pasteModal');renderSecEd();toast(rows.length+'行を追加しました')}
-async function addImgs(inp){const s=curSec();s.data.images=s.data.images||[];for(const f of inp.files){try{s.data.images.push(await readImage(f))}catch(e){toast(f.name+' を読み込めませんでした')}}save();renderSecEd()}
+async function addImgs(inp){const s=curSec();s.data.images=s.data.images||[];for(const f of inp.files){try{s.data.images.push(...await readImages(f))}catch(e){toast(f.name+' を読み込めませんでした')}}save();renderSecEd()}
 function mvSec(dir){const i=P.sections.findIndex(x=>x.id===SEL),j=i+dir;if(j<0||j>=P.sections.length)return;[P.sections[i],P.sections[j]]=[P.sections[j],P.sections[i]];save();renderManual()}
 function dupSec(){const i=P.sections.findIndex(x=>x.id===SEL);const c=JSON.parse(JSON.stringify(P.sections[i]));c.id=OMTpl.uid();c.title+='（コピー）';P.sections.splice(i+1,0,c);SEL=c.id;save();renderManual()}
 function delSec(){if(!confirm('このページを削除しますか？'))return;const i=P.sections.findIndex(x=>x.id===SEL);P.sections.splice(i,1);SEL=(P.sections[i]||P.sections[i-1]||{}).id;save();renderManual()}
@@ -35549,7 +35593,7 @@ function listEditor(d){
     const cellTa=(i,st)=>ta(c[i],`LD().rows[${ri}].cells[${i}]=this.value;save()`,st);
     if(k==='item'){
       const imgCol=Math.max(0,cols.findIndex(x=>/^(cut|カット|絵コンテ|画像)/i.test(x.name)));
-      h+=`<tr class="k-item" data-dnd="lrow" data-i="${ri}"><td>${kindSel}</td>${cols.map((col,i)=>`<td class="cell" data-cell="${ri},${i}"><span class="ch" draggable="true" title="ドラッグして同じ列の別の行に落とすと、このマスの中身だけを入れ替え">⠿</span>${cellTa(i)}${i===(imgCol<0?1:imgCol)?`${r.image?`<img class="thumb" src="${r.image.dataUrl}"><span class="imops"><label class="btnl">差し替え<input type="file" accept="image/*" hidden onchange="lImg(${ri},this)"></label><button class="btnl" onclick="if(confirm('この画像を削除しますか？')){LD().rows[${ri}].image=null;save();renderSched()}">削除</button></span>`:`<label class="hint" style="cursor:pointer">＋画像<input type="file" accept="image/*" hidden onchange="lImg(${ri},this)"></label>`}`:''}</td>`).join('')}${ops}</tr>`;
+      h+=`<tr class="k-item" data-dnd="lrow" data-i="${ri}"><td>${kindSel}</td>${cols.map((col,i)=>`<td class="cell" data-cell="${ri},${i}"><span class="ch" draggable="true" title="ドラッグして同じ列の別の行に落とすと、このマスの中身だけを入れ替え">⠿</span>${cellTa(i)}${i===(imgCol<0?1:imgCol)?`${r.image?`<img class="thumb" src="${r.image.dataUrl}"><span class="imops"><label class="btnl">差し替え<input type="file" accept="image/*,application/pdf,.pdf" hidden onchange="lImg(${ri},this)"></label><button class="btnl" onclick="if(confirm('この画像を削除しますか？')){LD().rows[${ri}].image=null;save();renderSched()}">削除</button></span>`:`<label class="hint" style="cursor:pointer">＋画像<input type="file" accept="image/*,application/pdf,.pdf" hidden onchange="lImg(${ri},this)"></label>`}`:''}</td>`).join('')}${ops}</tr>`;
     }else{
       const n=cols.length;const lab=k==='section'?['時刻','見出し','右端のメモ']:['時刻','内容','分','右側のメモ'];
       const parts=k==='section'?[0,1,2]:(minCol>1?[0,1,2,3]:[0,1]);
@@ -35585,7 +35629,7 @@ function lRow(i,dir){const a=LD().rows,j=i+dir;if(j<0||j>=a.length)return;[a[i],
 function lAdd(i){LD().rows.splice(i+1,0,{kind:'item',cells:LD().columns.map(()=>'')});save();renderSched()}
 function lDel(i){if(!confirm('この行を削除しますか？'))return;LD().rows.splice(i,1);save();renderSched()}
 function lCol(i,op){const d=LD();if(op==='add'){d.columns.push({name:'新しい列',w:1,align:'left'});d.rows.forEach(r=>{if((r.kind||'item')==='item')r.cells.push('')})}else{if(!confirm('この列を削除しますか？'))return;d.columns.splice(i,1);d.rows.forEach(r=>{if((r.kind||'item')==='item')r.cells.splice(i,1)})}save();renderSched()}
-async function lImg(ri,inp){const f=inp.files[0];if(!f)return;try{LD().rows[ri].image=await readImage(f)}catch(e){toast('画像を読み込めませんでした')}save();renderSched()}
+async function lImg(ri,inp){const f=inp.files[0];if(!f)return;try{const a=await readImages(f,{single:true});if(!a.length)return;LD().rows[ri].image=a[0]}catch(e){toast('画像を読み込めませんでした')}save();renderSched()}
 
 // ---------- PDF ----------
 let PDFW=null;
@@ -35875,10 +35919,10 @@ document.addEventListener('mousedown',e=>{
   if(ovr){PASTE_AT={kind:'ovrow',i:+ovr.dataset.i};return}
   if(e.target.closest&&e.target.closest('#main'))PASTE_AT=null;
 },true);
-function clipImages(dt){const out=[];if(!dt)return out;for(const it of dt.items||[]){if(it.kind==='file'&&/^image\//.test(it.type)){const f=it.getAsFile();if(f)out.push(f)}}if(!out.length)for(const f of dt.files||[])if(/^image\//.test(f.type))out.push(f);return out}
+function clipImages(dt){const ok=f=>/^image\//.test(f.type)||/pdf/i.test(f.type)||/\.pdf$/i.test(f.name||'');const out=[];if(!dt)return out;for(const it of dt.items||[]){if(it.kind==='file'&&(/^image\//.test(it.type)||/pdf/i.test(it.type))){const f=it.getAsFile();if(f)out.push(f)}}if(!out.length)for(const f of dt.files||[])if(ok(f))out.push(f);return out}
 async function putImages(files,at){
   if(!files.length)return false;
-  const imgs=[];for(const f of files){try{imgs.push(await readImage(f))}catch(e){toast('画像を読み込めませんでした')}}
+  const imgs=[];for(const f of files){try{imgs.push(...await readImages(f,{single:at&&at.kind==='lrow'||(TAB==='sched')}))}catch(e){toast('画像を読み込めませんでした')}}
   if(!imgs.length)return true;
   at=at||PASTE_AT;
   if(at&&at.kind==='slot'&&(TAB==='info'||(TAB==='manual'&&at.sec===SEL))){
@@ -35970,13 +36014,13 @@ function dndClear(){$$('.drop-before,.drop-after,.drop-left,.drop-right,.dropok'
 // 画像1枚分：ドラッグで並べ替え・差し替え・削除
 function imgTile(im,key,k,a,arr){
   if(im.slot&&!im.dataUrl)return `<div class="im slotTile" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''} data-slotarr="${arr}" data-k="${k}" title="クリックしてから ⌘V でスクリーンショットを貼り付け／画像ファイルをドラッグ">
-    <div class="slotBox"><b>〔画像：${esc(im.slot===true?'差し替え':im.slot)}〕</b><small>クリックして ⌘V で貼り付け<br>または画像をここにドラッグ</small></div>
-    <div class="imops"><label class="btnl">画像を選ぶ<input type="file" accept="image/*" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像枠を削除しますか？')){${arr}.splice(${k},1);save();reImgs()}">枠を削除</button></div></div>`;
-  return `<div class="im" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''}><img src="${im.dataUrl}" draggable="false">${im.slot?`<div class="slotCap">${esc(im.slot===true?'':im.slot)}</div>`:''}<div class="imops"><label class="sm btnl">差し替え<input type="file" accept="image/*" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像を削除しますか？')){${arr}.splice(${k},1);save();reImgs()}">削除</button></div></div>`}
+    <div class="slotBox"><b>〔画像：${esc(im.slot===true?'差し替え':im.slot)}〕</b><small>クリックして ⌘V で貼り付け<br>または画像・PDFをここにドラッグ</small></div>
+    <div class="imops"><label class="btnl">画像を選ぶ<input type="file" accept="image/*,application/pdf,.pdf" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像枠を削除しますか？')){${arr}.splice(${k},1);save();reImgs()}">枠を削除</button></div></div>`;
+  return `<div class="im" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''}><img src="${im.dataUrl}" draggable="false">${im.slot?`<div class="slotCap">${esc(im.slot===true?'':im.slot)}</div>`:''}<div class="imops"><label class="sm btnl">差し替え<input type="file" accept="image/*,application/pdf,.pdf" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像を削除しますか？')){${arr}.splice(${k},1);save();reImgs()}">削除</button></div></div>`}
 function ovImgOK(r){return /集合/.test(r.label||'')||(r.images||[]).length>0}
-async function ovAddImgs(i,inp){const r=P.info.overview[i];r.images=r.images||[];for(const f of inp.files){try{r.images.push(await readImage(f))}catch(e){toast('画像を読み込めませんでした')}}save();render();toast('画像を追加しました')}
-function reImgs(){if(TAB==='manual')reImgs();else render()}
-async function imgReplace(arr,k,inp){const f=inp.files[0];if(!f)return;try{const old=arr[k]||{};arr[k]=await readImage(f);if(old.slot)arr[k].slot=old.slot;save();reImgs();toast('画像を差し替えました')}catch(e){toast('画像を読み込めませんでした')}}
+async function ovAddImgs(i,inp){const r=P.info.overview[i];r.images=r.images||[];for(const f of inp.files){try{r.images.push(...await readImages(f))}catch(e){toast('画像を読み込めませんでした')}}save();render();toast('画像を追加しました')}
+function reImgs(){if(TAB==='manual')renderSecEd();else render()}
+async function imgReplace(arr,k,inp){const f=inp.files[0];if(!f)return;try{const old=arr[k]||{};const a=await readImages(f);if(!a.length)return;arr[k]=a[0];if(old.slot)arr[k].slot=old.slot;if(a.length>1)arr.splice(k+1,0,...a.slice(1));save();reImgs();toast('画像を差し替えました')}catch(e){toast('画像を読み込めませんでした')}}
 document.addEventListener('dragstart',e=>{
   const ch=e.target.closest&&e.target.closest('.ch');
   if(ch){const td=ch.closest('td[data-cell]');DRAG={cell:td.dataset.cell.split(',').map(Number)};td.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','c');e.dataTransfer.setDragImage(td,10,10)}catch(x){}return}
