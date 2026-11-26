@@ -187,6 +187,10 @@ body:not(.cloud) .cloudOnly{display:none!important}
 .libtools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
 .libtools input{max-width:280px}
 .libcard .by{font-size:11px;color:#555}
+.memList{margin:6px 0 12px;display:flex;flex-direction:column;gap:8px}
+.mrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.mlab{font-size:12px;font-weight:700;min-width:120px}
+.mchip{display:inline-flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:#fff;line-height:1.3}
+.mchip.own{border-color:var(--red);background:#fff6f6}.mchip b{font-size:12.5px}.mchip small{font-size:10.5px;color:#777}
 .memgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.memgrid textarea{min-height:110px;font-size:12px}
 #loginLog{list-style:none;padding:0;margin:6px 0 0;max-height:220px;overflow:auto;font-size:12px}#loginLog li{padding:3px 0;border-bottom:1px solid #f0f0f0}
 .libgrid{display:flex;flex-direction:column;gap:8px}
@@ -260,7 +264,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-32</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-33</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -34781,7 +34785,7 @@ async function ownerAlert() {
 async function saveMembers() {
   const parse = (v) => [...new Set(v.split(/[\s,、]+/).map((x) => x.trim().toLowerCase()).filter((x) => x.includes('@')))];
   const owners = parse($('#memOwn').value); if (!owners.includes(OWNER0)) owners.unshift(OWNER0);
-  try { await fdb.collection('config').doc('roles').set({ owners, invited: parse($('#memInv').value), updatedBy: me.email }); toast('メンバーを保存しました') } catch (e) { toast('保存できませんでした（' + (e.code || e.message) + '）') }
+  try { await fdb.collection('config').doc('roles').set({ owners, invited: parse($('#memInv').value), updatedBy: me.email }); MEMNAMES.at = 0; toast('メンバーを保存しました'); if (TAB === 'lib') renderLib() } catch (e) { toast('保存できませんでした（' + (e.code || e.message) + '）') }
 }
 async function loadLogins() {
   const L = $('#loginLog'); L.innerHTML = '<li class="hint">読み込み中…</li>';
@@ -35762,10 +35766,28 @@ function renderCloudLib(){
   <h2 style="margin-top:18px">作業データ（${hist.length}）</h2>${hist.length?`<div class="libgrid">${hist.map(card).join('')}</div>`:'<p class="hint">ありません。</p>'}</div>
   ${isOwner()?`<div class="card"><h2>メンバー（オーナーのみ表示）</h2>
     <p class="hint">@alonzo.jp のアカウントなら誰でもログインできます。招待リストにない人がログインすると、次にオーナーが開いたときにお知らせします。</p>
+    <div id="memList" class="memList"></div>
     <div class="memgrid"><label class="f"><span>招待リスト（1行に1人のメールアドレス）</span><textarea id="memInv">${esc((roles.invited||[]).join('\n'))}</textarea></label>
     <label class="f"><span>オーナー（削除・メンバー管理ができる人）</span><textarea id="memOwn">${esc((roles.owners||[]).join('\n'))}</textarea></label></div>
     <div style="display:flex;gap:8px"><button class="primary" onclick="saveMembers()">メンバーを保存</button><button onclick="loadLogins()">最近のログインを見る</button></div>
     <ul id="loginLog"></ul></div>`:''}`;
+  if(isOwner())fillMembers();
+}
+// メンバー（オーナー・招待リスト）を名前つきで表示
+let MEMNAMES={map:null,at:0};
+async function memberNames(){
+  if(MEMNAMES.map&&Date.now()-MEMNAMES.at<60000)return MEMNAMES.map;
+  const m={};CLIB.forEach(x=>{if(x.createdBy&&x.createdByName)m[x.createdBy]=x.createdByName;if(x.updatedBy&&x.updatedByName)m[x.updatedBy]=x.updatedByName});
+  if(me)m[me.email]=me.name;
+  try{const s=await fdb.collection('logins').orderBy('at','desc').limit(300).get();s.forEach(d=>{const r=d.data();if(r.email&&r.name&&!m[r.email])m[r.email]=r.name})}catch(e){}
+  MEMNAMES={map:m,at:Date.now()};return m;
+}
+async function fillMembers(){
+  const el=$('#memList');if(!el)return;const m=await memberNames();
+  const chip=(e,own)=>`<span class="mchip ${own?'own':''}"><b>${esc(m[e]||'（まだログインしていません）')}</b><small>${esc(e)}</small></span>`;
+  const inv=(roles.invited||[]).filter(e=>!(roles.owners||[]).includes(e));
+  el.innerHTML=`<div class="mrow"><span class="mlab">オーナー（${(roles.owners||[]).length}名）</span>${(roles.owners||[]).map(e=>chip(e,true)).join('')}</div>
+    <div class="mrow"><span class="mlab">招待リスト（${inv.length}名）</span>${inv.length?inv.map(e=>chip(e,false)).join(''):'<span class="hint">なし</span>'}</div>`;
 }
 async function confirmLeave(){return confirm(CLOUD?'いま編集中のデータを閉じて切り替えます。よろしいですか？\n（編集内容は自動で共有に保存されています）':'いま編集中の内容を閉じて切り替えます。\n（いまの内容はライブラリに保存してから切り替えます）\nよろしいですか？')}
 async function libOpen(id){
