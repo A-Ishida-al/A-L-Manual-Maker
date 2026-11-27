@@ -96,6 +96,7 @@ table.ed textarea{min-height:30px;height:30px;resize:vertical}
 .lbot{position:absolute;left:0;right:0;bottom:-10px;height:10px;cursor:row-resize;touch-action:none;z-index:2}.lbot i{left:0;right:0;top:3px;height:4px}
 .cfList{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 14px;font-size:12.5px}.cfCol{background:#f6f6f6;border-radius:8px;padding:10px 12px;max-height:240px;overflow:auto}
 .cfCol ul{margin:6px 0 0;padding-left:18px}.cfCol li{margin:2px 0}.cfWarn{grid-column:1/-1;margin:0;color:var(--red);font-weight:600}
+.stk{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:13px}
 .varwarn{background:#fff8e1;border:1px solid #f0d27a;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12.5px}.varwarn p{margin:0 0 6px}
 .varwarn .vw{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #eadca8;border-radius:6px;padding:4px 8px;margin:0 6px 6px 0}.varwarn .vw small{color:#888}.varwarn select{font-size:12px}
 .impbar{display:flex;gap:10px;align-items:center;margin:2px 0 12px}
@@ -303,7 +304,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-44</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-45</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -31190,7 +31191,7 @@ MAX: 9026 };
         { type: 'text', body: TXT.stdLoadin },
         { type: 'image', images: [{ slot: '搬入経路図', w: 16, h: 9 }], width: 100 }] }, { pages: 'auto' }),
       stdLayout: () => S('blocks', '会場・搬入出', '会場レイアウト（平面図）', { blocks: [
-        { type: 'image', images: [{ slot: '会場平面図・レイアウト', w: 16, h: 12 }], width: 100, tall: true },
+        { type: 'image', images: [{ slot: '会場平面図・レイアウト', w: 16, h: 12 }], width: 100, tall: true, stack: true },
         { type: 'text', body: TXT.stdLayout }] }, { pages: 'auto' }),
       stdBackyard: () => S('blocks', '会場・搬入出', '控室・バックヤード', { blocks: [
         { type: 'image', images: [{ slot: '控室・バックヤードの図', w: 16, h: 9 }], width: 100 },
@@ -31374,7 +31375,7 @@ MAX: 9026 };
     let i = 0;
     while (i < ims.length) {
       if (!ok(ims[i])) { i++; continue; }
-      const a = ims[i], two = !a.solo && ok(ims[i + 1]) && !ims[i + 1].solo, row = two ? [i, i + 1] : [i];
+      const a = ims[i], two = !b.stack && !a.solo && ok(ims[i + 1]) && !ims[i + 1].solo, row = two ? [i, i + 1] : [i];
       let L = a.lay;
       if (!L || L.n !== row.length) {
         if (two) { const a1 = asp(a), a2 = asp(ims[i + 1]); L = { n: 2, wl: a1 / (a1 + a2), h: (1 - GAPF) / (a1 + a2) }; }
@@ -35880,7 +35881,7 @@ async function applyImport(){if(P&&P.sections&&P.sections.length)await saveToHis
 // =========================================================
 // ライブラリ（書き出し履歴・テンプレート）
 // =========================================================
-function ensureMeta(p){p.meta=p.meta||{};(p.sections||[]).forEach(sc=>{if(sc.kind==='text'&&sc.title==='地震・災害時対応'){sc.kind='blocks';sc.data={blocks:[{type:'text',body:(sc.data&&sc.data.body)||''},{type:'image',images:[{slot:'避難経路・非常口マップ',w:16,h:11}],width:100}]};sc.pages='auto'}const bl=sc.data&&sc.data.blocks;if(bl)bl.forEach((b,i)=>{if(b&&b.type==='image'&&(b.images||[]).length===1&&b.images[0].slot==='運営体制図（指揮系統）'&&!b.images[0].dataUrl)bl[i]=OMTpl.orgDefault()})});if(p.info){p.info.vars=p.info.vars||[];['開催日','会場住所','会場名','主催'].forEach(k=>{if(!p.info.vars.some(v=>v.key===k))p.info.vars.unshift({key:k,value:''})})}if(!p.meta.id)p.meta.id=OMTpl.uid()+OMTpl.uid();if(!p.meta.created)p.meta.created=new Date().toISOString();return p}
+function ensureMeta(p){p.meta=p.meta||{};(p.sections||[]).forEach(sc=>{if(/^会場レイアウト/.test(sc.title||'')&&sc.data&&sc.data.blocks)sc.data.blocks.forEach(b=>{if(b.type==='image'&&b.stack==null)b.stack=true});if(sc.kind==='text'&&sc.title==='地震・災害時対応'){sc.kind='blocks';sc.data={blocks:[{type:'text',body:(sc.data&&sc.data.body)||''},{type:'image',images:[{slot:'避難経路・非常口マップ',w:16,h:11}],width:100}]};sc.pages='auto'}const bl=sc.data&&sc.data.blocks;if(bl)bl.forEach((b,i)=>{if(b&&b.type==='image'&&(b.images||[]).length===1&&b.images[0].slot==='運営体制図（指揮系統）'&&!b.images[0].dataUrl)bl[i]=OMTpl.orgDefault()})});if(p.info){p.info.vars=p.info.vars||[];['開催日','会場住所','会場名','主催'].forEach(k=>{if(!p.info.vars.some(v=>v.key===k))p.info.vars.unshift({key:k,value:''})})}if(!p.meta.id)p.meta.id=OMTpl.uid()+OMTpl.uid();if(!p.meta.created)p.meta.created=new Date().toISOString();return p}
 async function libIndex(){if(CLOUD)return CLIB.slice();try{const s=await idbGet('lib_index');return s?JSON.parse(s):[]}catch(e){return[]}}
 async function libSaveIndex(ix){await idbPut('lib_index',JSON.stringify(ix))}
 async function libPut(entry,project){
@@ -36443,7 +36444,8 @@ function layEditor(b,bi){
       if(p===0&&idx.length===2)h+=`<div class="ldiv" style="width:${G}px" onpointerdown="layDrag(event,${bi},${idx[0]},'w')" title="左右にドラッグして幅を変える"><i></i></div>`});
     h+=`<div class="lbot" onpointerdown="layDrag(event,${bi},${idx[0]},'h')" title="上下にドラッグして高さを変える"><i></i></div></div>`});
   if(!rows.length)h+='<p class="hint" style="padding:20px">画像がありません。下の枠に貼り付けるか、ファイルを選んでください。</p>';
-  h+=`</div><div class="row" style="margin-top:12px;align-items:flex-end;gap:12px">${sizeCtl(b,bi,'imgs'+bi)}
+  h+=`</div><label class="stk"><input type="checkbox" ${b.stack?'checked':''} onchange="curSec().data.blocks[${bi}].stack=this.checked;save();renderSecEd()"> 横に並べず、縦に1枚ずつ大きく貼る（平面図・地図など）</label>
+    <div class="row" style="margin-top:12px;align-items:flex-end;gap:12px">${sizeCtl(b,bi,'imgs'+bi)}
     <div class="hint" style="flex:1">1段に2枚まで並びます。画像の<b>あいだの線</b>を左右にドラッグすると幅、<b>段の下の線</b>を上下にドラッグすると高さが変わります（はみ出た部分は自動で切り抜き）。写す範囲は「トリミング」で調整します。<br>
     <input type="file" accept="image/*,application/pdf,.pdf" multiple onchange="blkAddImgs(${bi},this)"> <button class="ghost sm" onclick="layReset(${bi})">並びを最初の状態に戻す</button></div></div>`;
   return h;
@@ -36453,7 +36455,7 @@ function layCell(b,bi,k,w,n){const im=b.images[k],arr=`curSec().data.blocks[${bi
   return `<div class="im lcell ${im.slot&&!im.dataUrl?'slotTile':''}" style="width:${w}px" draggable="true" data-dnd="bimg" data-i="${k}" data-axis="x" data-a="${bi}" ${im.slot&&!im.dataUrl?`data-slotarr="${arr}" data-k="${k}"`:''}>${body}
     ${im.slot&&im.dataUrl&&im.slot!==true?`<div class="slotCap">${esc(im.slot)}</div>`:''}
     <div class="lops">${im.dataUrl?`<button class="sm" onclick="openCrop(${bi},${k})">トリミング</button>`:''}<label class="sm btnl">${im.dataUrl?'差し替え':'画像を選ぶ'}<input type="file" accept="image/*,application/pdf,.pdf" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像を削除しますか？')){${arr}.splice(${k},1);save();reImgs()}">削除</button>
-    <button class="sm" onclick="laySolo(${bi},${k})">${n===2?'1段に1枚にする':'横に並べる'}</button><button class="sm" ${k===0?'disabled':''} onclick="imgMv(${bi},${k},-1)" title="前へ">◀</button><button class="sm" ${k===b.images.length-1?'disabled':''} onclick="imgMv(${bi},${k},1)" title="後ろへ">▶</button></div></div>`}
+    ${b.stack?'':`<button class="sm" onclick="laySolo(${bi},${k})">${n===2?'1段に1枚にする':'横に並べる'}</button>`}<button class="sm" ${k===0?'disabled':''} onclick="imgMv(${bi},${k},-1)" title="前へ">◀</button><button class="sm" ${k===b.images.length-1?'disabled':''} onclick="imgMv(${bi},${k},1)" title="後ろへ">▶</button></div></div>`}
 function laySolo(bi,k){const b=curSec().data.blocks[bi],im=b.images[k];const row=OMGen.imgLayout(b).find(r=>r.idx.includes(k));
   if(row&&row.idx.length===2){row.idx.forEach(i=>{b.images[i].solo=true;delete b.images[i].lay})}else{delete im.solo;delete im.lay;const nx=b.images[k+1],pv=b.images[k-1];if(nx&&nx.solo){delete nx.solo;delete nx.lay}else if(pv&&pv.solo){delete pv.solo;delete pv.lay}}
   save();renderSecEd()}
