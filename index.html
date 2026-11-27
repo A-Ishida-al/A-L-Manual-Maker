@@ -304,7 +304,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-45</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-46</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -31893,7 +31893,8 @@ MAX: 9026 };
       const rows = imgLayout(b), ims = b.images || [];
       if (!rows.length) return [];
       const totalW = Math.round(CW * Math.min(100, Math.max(10, Number(b.width) || 100)) / 100);
-      const maxH = Math.round(CH * 0.85), out = [];
+      // 縦に1枚ずつの場合、2枚以上なら1ページに2枚入る高さまでにする
+      const maxH = Math.round(CH * (b.stack && rows.length >= 2 ? 0.44 : 0.85)), out = [];
       rows.forEach(({ idx, L }) => {
         let tw = totalW, H = Math.round(L.h * totalW);
         if (H > maxH) { tw = Math.round(totalW * maxH / H); H = maxH; }
@@ -32020,7 +32021,8 @@ MAX: 9026 };
     }
     function imageH(b) {
       const totalW = CW * Math.min(100, Number(b.width) || 100) / 100;
-      return imgLayout(b).reduce((a, r) => a + Math.min(CH * 0.85, r.L.h * totalW) + 200, 0);
+      const rs = imgLayout(b), mh = CH * (b.stack && rs.length >= 2 ? 0.44 : 0.85);
+      return rs.reduce((a, r) => a + Math.min(mh, r.L.h * totalW) + 200, 0);
     }
     function estimatePages(s) {
       const d = s.data || {};
@@ -36444,7 +36446,7 @@ function layEditor(b,bi){
       if(p===0&&idx.length===2)h+=`<div class="ldiv" style="width:${G}px" onpointerdown="layDrag(event,${bi},${idx[0]},'w')" title="左右にドラッグして幅を変える"><i></i></div>`});
     h+=`<div class="lbot" onpointerdown="layDrag(event,${bi},${idx[0]},'h')" title="上下にドラッグして高さを変える"><i></i></div></div>`});
   if(!rows.length)h+='<p class="hint" style="padding:20px">画像がありません。下の枠に貼り付けるか、ファイルを選んでください。</p>';
-  h+=`</div><label class="stk"><input type="checkbox" ${b.stack?'checked':''} onchange="curSec().data.blocks[${bi}].stack=this.checked;save();renderSecEd()"> 横に並べず、縦に1枚ずつ大きく貼る（平面図・地図など）</label>
+  h+=`</div><label class="stk"><input type="checkbox" ${b.stack?'checked':''} onchange="curSec().data.blocks[${bi}].stack=this.checked;save();renderSecEd()"> 横に並べず、縦に1枚ずつ大きく貼る（平面図・地図など。2枚以上は1ページに2枚入る大きさになります）</label>
     <div class="row" style="margin-top:12px;align-items:flex-end;gap:12px">${sizeCtl(b,bi,'imgs'+bi)}
     <div class="hint" style="flex:1">1段に2枚まで並びます。画像の<b>あいだの線</b>を左右にドラッグすると幅、<b>段の下の線</b>を上下にドラッグすると高さが変わります（はみ出た部分は自動で切り抜き）。写す範囲は「トリミング」で調整します。<br>
     <input type="file" accept="image/*,application/pdf,.pdf" multiple onchange="blkAddImgs(${bi},this)"> <button class="ghost sm" onclick="layReset(${bi})">並びを最初の状態に戻す</button></div></div>`;
