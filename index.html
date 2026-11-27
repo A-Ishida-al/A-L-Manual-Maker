@@ -306,7 +306,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-50</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-51</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -35426,7 +35426,7 @@ function renderSecEd(){
   if($('#secPages'))$('#secPages').oninput=e=>{s.pages=Math.max(1,Number(e.target.value)||1);save()};
   if($('#secAuto'))$('#secAuto').onchange=e=>{s.pages=e.target.checked?'auto':1;save();renderSecEd()};
   $$('#secEd textarea[data-b]').forEach(t=>{t.oninput=()=>{d.blocks[+t.dataset.b][t.dataset.f]=t.value;save()};t.onfocus=()=>lastTA=t});
-  $$('#secEd textarea[data-f]').forEach(t=>{t.oninput=()=>{d[t.dataset.f]=t.value;save()};t.onfocus=()=>lastTA=t});
+  $$('#secEd textarea[data-f]:not([data-b])').forEach(t=>{t.oninput=()=>{d[t.dataset.f]=t.value;save()};t.onfocus=()=>lastTA=t});
   setTimeout(secCrops,0);
 }
 let lastTA=null;
@@ -35495,6 +35495,13 @@ function varWarn(){const u=varUse(),have=new Set(P.info.vars.map(v=>v.key));cons
   if(!miss.length&&!unused.length)return '';
   return `<div class="varwarn">${miss.length?`<p><b>⚠ 本文で使われているのに、共通項目にない名前があります</b>（このままだと黄色の〔 〕で書き出されます）</p><div>${miss.map(k=>`<span class="vw">{{${esc(k)}}} <small>${u[k]}か所</small> <button class="sm" onclick="P.info.vars.push({key:'${esc(k)}',value:''});save();render()">＋ 追加</button>${unused.length?`<select onchange="if(this.value!==''){P.info.vars[+this.value].key='${esc(k)}';save();render()}"><option value="">既存の項目名をこれに変える…</option>${P.info.vars.map((v,i)=>!u[v.key]&&v.key?`<option value="${i}">「${esc(v.key)}」→「${esc(k)}」</option>`:'').join('')}</select>`:''}</span>`).join('')}</div>`:''}
     ${unused.length?`<p class="hint" style="margin-top:6px">本文で使われていない項目：${unused.map(k=>'{{'+esc(k)+'}}').join('　')}</p>`:''}</div>`}
+// 以前の不具合で、ブロック内の文章の入力が data.body に入っていたものを元のブロックへ戻す
+function fixStrayBody(sc){const d=sc&&sc.data;if(!d||!Array.isArray(d.blocks)||typeof d.body!=='string')return;const t=d.body;delete d.body;if(!t.trim())return;
+  const tb=d.blocks.filter(b=>b&&b.type==='text');if(tb.some(b=>b.body===t))return;
+  const L=x=>new Set(String(x||'').split('\n').map(z=>z.trim()).filter(Boolean)),A=L(t);let best=null,bs=0;
+  tb.forEach(b=>{const B=L(b.body);let i=0;A.forEach(z=>{if(B.has(z))i++});const sc2=i/Math.max(1,new Set([...A,...B]).size);const h1=String(b.body||'').split('\n')[0].trim(),h2=t.split('\n')[0].trim();const s3=sc2+(h1&&h1===h2?0.5:0);if(s3>bs){bs=s3;best=b}});
+  if(!best||bs<0.15)best=tb.find(b=>!String(b.body||'').trim()||/^■ 見出し\n・本文$/.test(String(b.body).trim()))||null;
+  if(best)best.body=t;else d.blocks.push({type:'text',body:t})}
 function toBlocks(img){const s=curSec();if(!s||s.kind!=='text')return;const body=(s.data&&s.data.body)||'';s.kind='blocks';s.data={blocks:[{type:'text',body},{type:'image',images:img?[{slot:img,w:16,h:11}]:[],width:100}]};s.pages='auto';save();render();toast('画像・表を足せる形にしました')}
 function blkAdd(t){const bl=curSec().data.blocks;bl.push(t==='text'?{type:'text',body:'■ 見出し\n・本文'}:t==='table'?{type:'table',header:true,columns:[{name:'項目',w:2,align:'left'},{name:'内容',w:5,align:'left'}],rows:[['','']]}:t==='image'?{type:'image',images:[],width:100}:t==='org'?OMTpl.orgDefault():{type:'schedule',dayId:(P.schedule.days[0]||{}).id});save();renderSecEd()}
 function blkMv(i,dir){const a=curSec().data.blocks,j=i+dir;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();renderSecEd()}
@@ -35889,7 +35896,7 @@ async function applyImport(){if(P&&P.sections&&P.sections.length)await saveToHis
 // =========================================================
 // ライブラリ（書き出し履歴・テンプレート）
 // =========================================================
-function ensureMeta(p){p.meta=p.meta||{};(p.sections||[]).forEach(sc=>{if(/^会場レイアウト/.test(sc.title||'')&&sc.data&&sc.data.blocks)sc.data.blocks.forEach(b=>{if(b.type==='image'&&b.stack==null)b.stack=true});if(sc.kind==='text'&&sc.title==='地震・災害時対応'){sc.kind='blocks';sc.data={blocks:[{type:'text',body:(sc.data&&sc.data.body)||''},{type:'image',images:[{slot:'避難経路・非常口マップ',w:16,h:11}],width:100}]};sc.pages='auto'}const bl=sc.data&&sc.data.blocks;if(bl)bl.forEach((b,i)=>{if(b&&b.type==='image'&&(b.images||[]).length===1&&b.images[0].slot==='運営体制図（指揮系統）'&&!b.images[0].dataUrl)bl[i]=OMTpl.orgDefault()})});if(p.info){p.info.vars=p.info.vars||[];['開催日','会場住所','会場名','主催'].forEach(k=>{if(!p.info.vars.some(v=>v.key===k))p.info.vars.unshift({key:k,value:''})})}if(!p.meta.id)p.meta.id=OMTpl.uid()+OMTpl.uid();if(!p.meta.created)p.meta.created=new Date().toISOString();return p}
+function ensureMeta(p){p.meta=p.meta||{};(p.sections||[]).forEach(sc=>{fixStrayBody(sc);if(/^会場レイアウト/.test(sc.title||'')&&sc.data&&sc.data.blocks)sc.data.blocks.forEach(b=>{if(b.type==='image'&&b.stack==null)b.stack=true});if(sc.kind==='text'&&sc.title==='地震・災害時対応'){sc.kind='blocks';sc.data={blocks:[{type:'text',body:(sc.data&&sc.data.body)||''},{type:'image',images:[{slot:'避難経路・非常口マップ',w:16,h:11}],width:100}]};sc.pages='auto'}const bl=sc.data&&sc.data.blocks;if(bl)bl.forEach((b,i)=>{if(b&&b.type==='image'&&(b.images||[]).length===1&&b.images[0].slot==='運営体制図（指揮系統）'&&!b.images[0].dataUrl)bl[i]=OMTpl.orgDefault()})});if(p.info){p.info.vars=p.info.vars||[];['開催日','会場住所','会場名','主催'].forEach(k=>{if(!p.info.vars.some(v=>v.key===k))p.info.vars.unshift({key:k,value:''})})}if(!p.meta.id)p.meta.id=OMTpl.uid()+OMTpl.uid();if(!p.meta.created)p.meta.created=new Date().toISOString();return p}
 async function libIndex(){if(CLOUD)return CLIB.slice();try{const s=await idbGet('lib_index');return s?JSON.parse(s):[]}catch(e){return[]}}
 async function libSaveIndex(ix){await idbPut('lib_index',JSON.stringify(ix))}
 async function libPut(entry,project){
