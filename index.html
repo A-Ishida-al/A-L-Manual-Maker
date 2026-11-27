@@ -96,6 +96,12 @@ table.ed textarea{min-height:30px;height:30px;resize:vertical}
 .lbot{position:absolute;left:0;right:0;bottom:-10px;height:10px;cursor:row-resize;touch-action:none;z-index:2}.lbot i{left:0;right:0;top:3px;height:4px}
 .cfList{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 14px;font-size:12.5px}.cfCol{background:#f6f6f6;border-radius:8px;padding:10px 12px;max-height:240px;overflow:auto}
 .cfCol ul{margin:6px 0 0;padding-left:18px}.cfCol li{margin:2px 0}.cfWarn{grid-column:1/-1;margin:0;color:var(--red);font-weight:600}
+.impbar{display:flex;gap:10px;align-items:center;margin:2px 0 12px}
+.impsrc{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px}.impsrc>div{background:#f7f7f7;border-radius:8px;padding:12px}.impsrc p{margin:4px 0 8px}.impsrc textarea{width:100%;font-size:12px}
+.impopt{display:flex;gap:12px;flex-wrap:wrap}.impopt .f{min-width:220px}
+.imptbl{max-height:44vh;overflow:auto;border:1px solid var(--line);border-radius:6px}.imptbl table{border-collapse:collapse;font-size:12px;width:100%}
+.imptbl th{position:sticky;top:0;background:#f2f2f2;text-align:left;padding:6px;vertical-align:top;z-index:1}.imptbl th{min-width:110px}.imptbl th:first-child{min-width:0}.imptbl th select{font-size:11.5px;margin-top:4px;width:100%;max-width:170px}
+.imptbl td{border-top:1px solid #eee;padding:4px 6px;white-space:pre-wrap;vertical-align:top}.imptbl tr.off td{color:#bbb;text-decoration:line-through}.imptbl tr.off td:first-child{text-decoration:none}
 .imgs.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:760px}
 .imgs.g2 .im{display:flex;flex-direction:column}
 .imgs.g2 img{max-width:none;max-height:none;width:100%;aspect-ratio:var(--ar);object-fit:contain;background:#eee}
@@ -295,7 +301,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-40</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-42</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -308,7 +314,8 @@ body:not(.cloud) .cloudOnly{display:none!important}
   <span id="undoBar"><button id="undoBtn" onclick="undoGo(-1)" title="元に戻す（⌘Z／Ctrl+Z）" disabled>↶</button><button id="redoBtn" onclick="undoGo(1)" title="やり直す（⌘⇧Z／Ctrl+Y）" disabled>↷</button></span>
   <div class="dd" id="pvMenu"><button onclick="event.stopPropagation();$('#pvMenu').classList.toggle('on');$('#exMenu').classList.remove('on')">プレビュー ▾</button>
     <div class="ddm"><button onclick="$('#pvMenu').classList.remove('on');previewManual()"><b>マニュアル全体</b><small>表紙・目次・本文・香盤表</small></button>
-      <button onclick="$('#pvMenu').classList.remove('on');previewSchedule(true)"><b>香盤表のみ</b><small>香盤表だけ（全日程）</small></button></div></div>
+      <button onclick="$('#pvMenu').classList.remove('on');previewSchedule(true)"><b>香盤表のみ</b><small>香盤表だけ（全日程）</small></button>
+      <button onclick="$('#pvMenu').classList.remove('on');previewCurrent()"><b>作業中のページのみ</b><small>いま開いているページだけ（表紙・目次なし）</small></button></div></div>
   <div class="dd" id="exMenu"><button class="red" onclick="event.stopPropagation();$('#exMenu').classList.toggle('on');$('#pvMenu').classList.remove('on')">マニュアルを書き出し ▾</button>
     <div class="ddm"><button onclick="$('#exMenu').classList.remove('on');exportManual()"><b>Word（.docx）</b><small>A4縦の文書。そのまま印刷・配布用に</small></button>
       <button onclick="$('#exMenu').classList.remove('on');exportManualPpt()"><b>PowerPoint（.pptx）</b><small>1ページ＝1スライド。文字・表・ブロックを編集できる</small></button></div></div>
@@ -462,6 +469,17 @@ body:not(.cloud) .cloudOnly{display:none!important}
   <div class="cropVp"><img alt=""></div>
   <div class="cropBar"><span class="hint">縮小</span><input type="range" id="cropZ" min="1" max="6" step="0.01" value="1" oninput="cropZoom(Number(this.value))"><span class="hint">拡大</span>
   <button onclick="cropReset()">全体に戻す</button><button onclick="$('#cropModal').classList.remove('on');CROP=null">キャンセル</button><button class="primary" onclick="cropOk()">決定</button></div></div></div>
+<div class="modal" id="timModal"><div class="box" style="width:min(1100px,94vw);max-height:92vh;overflow:auto">
+  <h2>Excel・スプレッドシートから取り込む</h2>
+  <div class="impsrc">
+    <div><b>① Googleスプレッドシート／Excelからコピーして貼り付け</b><p class="hint">元の表で取り込みたい範囲（シート全体なら ⌘A）を選んで ⌘C → 下の枠をクリックして ⌘V</p>
+      <textarea id="timPaste" placeholder="ここに貼り付け（⌘V）" rows="3"></textarea></div>
+    <div><b>② ファイルを選ぶ</b><p class="hint">Excel（.xlsx）・CSV</p><input type="file" accept=".xlsx,.xlsm,.csv,.tsv,.txt" onchange="impFile(this)">
+      <p class="hint" style="margin-top:8px">GoogleスプレッドシートのURLは直接読めないため、①の貼り付けか「ファイル → ダウンロード → .xlsx」で保存したファイルをお使いください。</p></div>
+  </div>
+  <div id="timBody"></div>
+  <div class="acts"><button onclick="$('#timModal').classList.remove('on')">キャンセル</button><button class="primary" id="timGo" onclick="impApply()" disabled>表に取り込む</button></div>
+</div></div>
 <div class="modal" id="confModal"><div class="box">
   <h3>ほかの人が先に更新しました</h3>
   <p class="hint cfMsg"></p><div class="cfList"></div>
@@ -35415,6 +35433,7 @@ function tableEditor(d,bi=null){
   const cols=d.columns||[],rows=d.rows||(d.rows=[]);
   const opts=bi==null?'':`<div style="display:flex;gap:14px;margin-bottom:8px"><label><input type="checkbox" ${d.header!==false?'checked':''} onchange="${T}.header=this.checked;save();renderSecEd()"> 1行目を見出し行にする</label><label><input type="checkbox" ${d.firstColShade?'checked':''} onchange="${T}.firstColShade=this.checked;save()"> 左端の列に色を付ける（項目：内容 の表）</label></div>`;
   const core=`${opts}
+  <div class="impbar"><button class="sm" onclick="openImp(${bi})">📥 Excel・スプレッドシートから取り込む</button><span class="hint">すでに作ってあるリストを読み込んで、この表を埋めます</span></div>
   <div class="hint" style="margin-bottom:6px">列名・幅の比率・揃え</div>
   <table class="ed"><tr>${cols.map((c,k)=>`<td><input type="text" value="${esc(c.name)}" oninput="${T}.columns[${k}].name=this.value;save()">
     <div style="display:flex;gap:2px;margin-top:2px"><input type="number" step="0.5" min="0.5" value="${c.w||1}" title="幅の比率" style="width:52px" oninput="${T}.columns[${k}].w=Number(this.value)||1;save()">
@@ -36019,7 +36038,7 @@ async function libRemove(id){const ix=await libIndex();const x=ix.find(e=>e.id==
 // =========================================================
 // 印刷プレビュー
 // =========================================================
-async function showPreview(title,mode,opts,exportFn,landscape){
+async function showPreview(title,mode,opts,exportFn,landscape,proj){
   const pv=$('#pv'),box=$('#pvPages');
   $('#pvTitle').textContent=title;$('#pvCount').textContent='';box.style.zoom=1;
   box.innerHTML='<div class="pvload">ページを組んでいます…</div>';pv.classList.add('on');
@@ -36027,7 +36046,7 @@ async function showPreview(title,mode,opts,exportFn,landscape){
   $('#pvPageStyle').textContent=`@media print{@page{size:A4 ${landscape?'landscape':'portrait'};margin:0}}`;
   await new Promise(r=>setTimeout(r,30));
   try{
-    await ensureAllCrops();const doc=OMGen.build(OMHtml.D,P,mode,opts);
+    await ensureAllCrops();const doc=OMGen.build(OMHtml.D,proj||P,mode,opts);
     try{await document.fonts.ready}catch(e){}
     const n=OMHtml.render(doc,box);
     $('#pvCount').textContent=`全 ${n} ページ`;
@@ -36037,6 +36056,13 @@ async function showPreview(title,mode,opts,exportFn,landscape){
 function pvZoom(){$('#pvPages').style.zoom=$('#pvZoom').value}
 function closePreview(){$('#pv').classList.remove('on');$('#pvPages').innerHTML=''}
 function previewManual(){showPreview('運営マニュアル プレビュー','manual',{},()=>exportManual(),false)}
+function previewCurrent(){
+  if(TAB==='sched'||TAB==='schedule'){const d=P.schedule.days[DAY];if(d){const land=d.type==='list'?d.orientation==='landscape':(P.schedule.orientation||'landscape')==='landscape';
+    showPreview('香盤表 プレビュー　'+(d.title||''),'schedule',{orientation:P.schedule.orientation||'landscape',points:P.schedule.withPoints!==false,dayIds:[d.id]},()=>exportSchedule([d.id]),land);return}}
+  const cur=curSec();if(!cur){toast('マニュアル構成でページを選んでください');return}
+  const Q=Object.assign({},P,{sections:P.sections.map(s=>Object.assign({},s,{enabled:s.id===cur.id}))});
+  showPreview('プレビュー：'+(cur.title||'ページ'),'manual',{cover:false,toc:false},()=>exportManual(),false,Q);
+}
 function previewSchedule(sel){
   const S=P.schedule;if(!S.days.length){toast('日程がありません');return}
   const days=selDays(sel);if(!days.length){toast('日程を選んでください');return}
@@ -36230,6 +36256,58 @@ function imgTile(im,key,k,a,arr){
 function ovImgOK(r){return /集合/.test(r.label||'')||(r.images||[]).length>0}
 async function ovAddImgs(i,inp){const r=P.info.overview[i];r.images=r.images||[];for(const f of inp.files){try{r.images.push(...await readImages(f))}catch(e){toast('画像を読み込めませんでした')}}save();render();toast('画像を追加しました')}
 function reImgs(){if(TAB==='manual')renderSecEd();else render()}
+// ---------- Excel・スプレッドシートから表に取り込む ----------
+let TIM=null;
+function impTarget(){return TIM.bi==null?curSec().data:curSec().data.blocks[TIM.bi]}
+function openImp(bi){TIM={bi,sheets:[],si:0,hr:0,map:[],mode:'rows',skip:new Set(),how:'replace'};$('#timPaste').value='';$('#timBody').innerHTML='';$('#timGo').disabled=true;$('#timModal').classList.add('on');setTimeout(()=>$('#timPaste').focus(),50)}
+function parseDelim(t,d){const rows=[];let row=[],c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+  else if(ch==='"'&&c==='')q=true;else if(ch===d){row.push(c);c=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(c);rows.push(row);row=[];c=''}else c+=ch}
+  if(c!==''||row.length){row.push(c);rows.push(row)}return rows}
+function htmlRows(h){const d=new DOMParser().parseFromString(h,'text/html'),t=d.querySelector('table');if(!t)return null;const out=[];
+  t.querySelectorAll('tr').forEach((tr,ri)=>{out[ri]=out[ri]||[];let ci=0;tr.querySelectorAll('td,th').forEach(td=>{while(out[ri][ci]!=null)ci++;const v=(td.innerText||td.textContent||'').replace(/\u00a0/g,' ').trim(),cs=+td.colSpan||1,rs=+td.rowSpan||1;
+    for(let a=0;a<rs;a++){out[ri+a]=out[ri+a]||[];for(let b=0;b<cs;b++)out[ri+a][ci+b]=a||b?'':v}ci+=cs})});return out.map(r=>Array.from(r,x=>x??''))}
+document.addEventListener('paste',e=>{if(e.target.id!=='timPaste')return;const h=e.clipboardData.getData('text/html'),t=e.clipboardData.getData('text/plain');e.preventDefault();
+  const rows=(h&&htmlRows(h))||parseDelim(t,t.includes('\t')?'\t':',');e.target.value=t.slice(0,2000);impLoad([{name:'貼り付けた表',rows}])},true);
+async function impFile(inp){const f=inp.files[0];if(!f)return;try{
+  if(/\.(csv|tsv|txt)$/i.test(f.name)){const t=await f.text();impLoad([{name:f.name,rows:parseDelim(t,/\.tsv$/i.test(f.name)||t.includes('\t')?'\t':',')}]);return}
+  const wb=new ExcelJS.Workbook();await wb.xlsx.load(await f.arrayBuffer());const sh=[];
+  wb.eachSheet(ws=>{const rows=[];ws.eachRow({includeEmpty:true},(r,n)=>{const a=[];r.eachCell({includeEmpty:true},(c,k)=>{let v=c.text;if(v==null||typeof v==='object')v=c.value&&c.value.richText?c.value.richText.map(x=>x.text).join(''):String(c.value??'');a[k-1]=String(v)});rows[n-1]=Array.from(a,x=>x??'')});
+    sh.push({name:ws.name,rows:Array.from(rows,x=>x||[])})});impLoad(sh)}catch(e){console.error(e);toast('ファイルを読み込めませんでした（'+(e.message||e)+'）')}finally{inp.value=''}}
+const PERSON_RE=/^\s*([^/／\n]+?)\s*[/／]\s*([^\n(（]+?)\s*[\n\s]*[(（]([^)）]+)[)）]\s*$/;
+function impLoad(sheets){sheets=sheets.map(s=>({name:s.name,rows:s.rows.map(r=>r.map(x=>String(x??'').trim()))})).filter(s=>s.rows.some(r=>r.some(x=>x)));if(!sheets.length){toast('表の中身が見つかりませんでした');return}
+  TIM.sheets=sheets;TIM.si=0;impSheet();}
+function impSheet(){const S=TIM.sheets[TIM.si],R=S.rows;
+  // 「会社 / 名前（役割）」が横に並ぶ見出し行があれば「1列＝1人」で読む
+  let pr=-1;for(let i=0;i<Math.min(R.length,20);i++){if(R[i].filter(x=>PERSON_RE.test(x)).length>=3){pr=i;break}}
+  let hr=0,best=-1;for(let i=0;i<Math.min(R.length,15);i++){const n=R[i].filter(x=>x&&!/^[\d,.¥$]+$/.test(x)).length;if(n>best+1||(n>best&&i<3)){best=n;hr=i}}
+  TIM.hr=hr;TIM.pr=pr;TIM.mode=pr>=0?'cols':'rows';impAuto();impSkipEmpty();impRender()}
+function impRecords(){const S=TIM.sheets[TIM.si],R=S.rows;
+  if(TIM.mode==='cols'){const row=R[TIM.pr]||[];return {head:['所属','名前','役割'],recs:row.map(x=>PERSON_RE.exec(x)).filter(Boolean).map(m=>[m[1].trim(),m[2].trim(),m[3].trim()])}}
+  const head=(R[TIM.hr]||[]).map((x,i)=>x||'（'+(i+1)+'列目）'),n=Math.max(...R.map(r=>r.length));while(head.length<n)head.push('（'+(head.length+1)+'列目）');
+  let recs=R.slice(TIM.hr+1).filter(r=>r.some(x=>x));return {head,recs}}
+const IMP_KEYS=[[/氏名|名前|name|キャスト|担当者|スタッフ名/i,0],[/所属|会社|社名|company|事務所/i,1],[/役割|ポジション|担当|role|役職|position|キャラ/i,2],[/電話|tel|携帯|phone/i,3],[/系統|ch|チャンネル/i,4],[/備考|メモ|note/i,5]];
+function impAuto(){const T=impTarget(),{head}=impRecords(),used=new Set();
+  const kind=t=>{const k=IMP_KEYS.find(([re])=>re.test(t));return k?k[1]:-1};
+  TIM.map=(T.columns||[]).map(c=>{const nm=c.name||'';if(/^no\.?$|^番号$|^#$/i.test(nm.trim()))return 'seq';const k=kind(nm);if(k<0||k===4)return '';
+    let j=head.findIndex((h,i)=>!used.has(i)&&kind(h)===k);if(j<0)return '';used.add(j);return String(j)})}
+function impSkipEmpty(){const {recs}=impRecords();TIM.skip=new Set();recs.forEach((r,i)=>{if(!TIM.map.some(m=>m!==''&&m!=='seq'&&r[+m]))TIM.skip.add(i)})}
+function impRender(){const T=impTarget(),{head,recs}=impRecords(),S=TIM.sheets;
+  const val=(r,m,i)=>m==='seq'?String(i+1):m===''?'':(r[+m]||'');
+  let kept=0;const pv=recs.map((r,i)=>{const on=!TIM.skip.has(i);const k=on?kept++:-1;return `<tr class="${on?'':'off'}"><td><input type="checkbox" ${on?'checked':''} onchange="this.checked?TIM.skip.delete(${i}):TIM.skip.add(${i});impRender()"></td>${(T.columns||[]).map((c,ci)=>`<td>${esc(on?val(r,TIM.map[ci],k):val(r,TIM.map[ci]==='seq'?'':TIM.map[ci],0))}</td>`).join('')}</tr>`}).join('');
+  $('#timBody').innerHTML=`<div class="impopt">
+    ${S.length>1?`<label class="f"><span>シート</span><select onchange="TIM.si=+this.value;impSheet()">${S.map((x,i)=>`<option value="${i}" ${i===TIM.si?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>`:''}
+    ${TIM.pr>=0?`<label class="f"><span>読み方</span><select onchange="TIM.mode=this.value;impAuto();impSkipEmpty();impRender()"><option value="rows" ${TIM.mode==='rows'?'selected':''}>1行＝1人</option><option value="cols" ${TIM.mode==='cols'?'selected':''}>見出しの「会社 / 名前（役割）」から読む</option></select></label>`:''}
+    ${TIM.mode==='rows'?`<label class="f"><span>見出しの行</span><select onchange="TIM.hr=+this.value;impAuto();impSkipEmpty();impRender()">${S[TIM.si].rows.slice(0,15).map((r,i)=>`<option value="${i}" ${i===TIM.hr?'selected':''}>${i+1}行目：${esc(r.filter(x=>x).slice(0,4).join('／').slice(0,40))}</option>`).join('')}</select></label>`:''}
+    <label class="f"><span>入れ方</span><select onchange="TIM.how=this.value"><option value="replace" ${TIM.how==='replace'?'selected':''}>今の表の中身を置き換える</option><option value="append" ${TIM.how==='append'?'selected':''}>今の表の下に追加する</option></select></label></div>
+    <p class="hint" style="margin:10px 0 4px">表の列ごとに、どの列の内容を入れるか選んでください。入れたくない行はチェックを外します。</p>
+    <div class="imptbl"><table><thead><tr><th></th>${(T.columns||[]).map((c,ci)=>`<th>${esc(c.name)}<br><select onchange="TIM.map[${ci}]=this.value;impSkipEmpty();impRender()"><option value="">（空欄のまま）</option><option value="seq" ${TIM.map[ci]==='seq'?'selected':''}>（1から連番）</option>${head.map((h,j)=>`<option value="${j}" ${TIM.map[ci]===String(j)?'selected':''}>${esc(h.replace(/\n/g,' ').slice(0,24))}</option>`).join('')}</select></th>`).join('')}</tr></thead><tbody>${pv||'<tr><td colspan="99" class="hint">行がありません</td></tr>'}</tbody></table></div>
+    <p class="hint">${kept}行を取り込みます</p>`;
+  $('#timGo').disabled=!kept;}
+function impApply(){const T=impTarget(),{recs}=impRecords(),cols=T.columns||[];T.rows=T.rows||[];
+  const base=TIM.how==='append'?T.rows.length:0,out=[];let k=0;
+  recs.forEach((r,i)=>{if(TIM.skip.has(i))return;k++;out.push(cols.map((c,ci)=>{const m=TIM.map[ci];return m==='seq'?String(base+k):m===''?'':(r[+m]||'')}))});
+  if(TIM.how==='replace')T.rows=out;else T.rows.push(...out);
+  $('#timModal').classList.remove('on');save();renderSecEd();renderSecListBadges&&renderSecListBadges();toast(out.length+'行を取り込みました')}
 // ---------- 大きさ（本文幅に対する％） ----------
 function sizeCtl(b,bi,target){const w=b.width||100;return `<label class="f szc"><span>大きさ（本文の横幅に対して）<b id="szv${bi}">${w}%</b></span><span class="szr"><button class="ghost sm" onclick="szStep(${bi},-10,'${target}')">－</button><input type="range" min="20" max="100" step="5" value="${w}" id="szr${bi}" oninput="szSet(${bi},this.value,'${target}')"><button class="ghost sm" onclick="szStep(${bi},10,'${target}')">＋</button></span></label>`}
 function szSet(bi,v,target){v=Math.max(20,Math.min(100,Number(v)||100));const b=curSec().data.blocks[bi];b.width=v;$('#szv'+bi).textContent=v+'%';$('#szr'+bi).value=v;const el=$('#'+target);if(/^imgs/.test(target)){clearTimeout(window._szT);window._szT=setTimeout(renderSecEd,120)}else if(el)el.style.maxWidth=Math.round(760*v/100)+'px';save()}
