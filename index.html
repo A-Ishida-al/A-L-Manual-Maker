@@ -99,6 +99,7 @@ table.ed textarea{min-height:30px;height:30px;resize:vertical}
 .stk{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:13px}
 .varwarn{background:#fff8e1;border:1px solid #f0d27a;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12.5px}.varwarn p{margin:0 0 6px}
 .varwarn .vw{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #eadca8;border-radius:6px;padding:4px 8px;margin:0 6px 6px 0}.varwarn .vw small{color:#888}.varwarn select{font-size:12px}
+.impurl{background:#fff8e1;border:1px solid #f0d27a;border-radius:8px;padding:12px 16px;font-size:13px}.impurl ol{margin:6px 0 8px;padding-left:20px}.impurl li{margin:3px 0}.impurl p{margin:6px 0}
 .impbar{display:flex;gap:10px;align-items:center;margin:2px 0 12px}
 .impsrc{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px}.impsrc>div{background:#f7f7f7;border-radius:8px;padding:12px}.impsrc p{margin:4px 0 8px}.impsrc textarea{width:100%;font-size:12px}
 .impopt{display:flex;gap:12px;flex-wrap:wrap}.impopt .f{min-width:220px}
@@ -304,7 +305,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-46</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-47</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -475,8 +476,8 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <div class="modal" id="timModal"><div class="box" style="width:min(1100px,94vw);max-height:92vh;overflow:auto">
   <h2>Excel・スプレッドシートから取り込む</h2>
   <div class="impsrc">
-    <div><b>① Googleスプレッドシート／Excelからコピーして貼り付け</b><p class="hint">元の表で取り込みたい範囲（シート全体なら ⌘A）を選んで ⌘C → 下の枠をクリックして ⌘V</p>
-      <textarea id="timPaste" placeholder="ここに貼り付け（⌘V）" rows="3"></textarea></div>
+    <div><b>① Googleスプレッドシート／Excelからコピーして貼り付け</b><p class="hint">元の表で取り込みたい範囲（シート全体なら ⌘A）を選んで ⌘C → 下の枠をクリックして ⌘V<br><b>URLではなく、セルの中身</b>をコピーしてください</p>
+      <textarea id="timPaste" placeholder="ここに表の中身を貼り付け（⌘V）※URLではなく、セルをコピーして貼ってください" rows="3" oninput="if(/^\s*https?:\/\//.test(this.value))impUrl(this.value.trim())"></textarea></div>
     <div><b>② ファイルを選ぶ</b><p class="hint">Excel（.xlsx）・CSV</p><input type="file" accept=".xlsx,.xlsm,.csv,.tsv,.txt" onchange="impFile(this)">
       <p class="hint" style="margin-top:8px">GoogleスプレッドシートのURLは直接読めないため、①の貼り付けか「ファイル → ダウンロード → .xlsx」で保存したファイルをお使いください。</p></div>
   </div>
@@ -36283,7 +36284,13 @@ function htmlRows(h){const d=new DOMParser().parseFromString(h,'text/html'),t=d.
   t.querySelectorAll('tr').forEach((tr,ri)=>{out[ri]=out[ri]||[];let ci=0;tr.querySelectorAll('td,th').forEach(td=>{while(out[ri][ci]!=null)ci++;const v=(td.innerText||td.textContent||'').replace(/\u00a0/g,' ').trim(),cs=+td.colSpan||1,rs=+td.rowSpan||1;
     for(let a=0;a<rs;a++){out[ri+a]=out[ri+a]||[];for(let b=0;b<cs;b++)out[ri+a][ci+b]=a||b?'':v}ci+=cs})});return out.map(r=>Array.from(r,x=>x??''))}
 document.addEventListener('paste',e=>{if(e.target.id!=='timPaste')return;const h=e.clipboardData.getData('text/html'),t=e.clipboardData.getData('text/plain');e.preventDefault();
+  if(/^\s*https?:\/\/\S+\s*$/.test(t)&&!(h&&/<table/i.test(h))){e.target.value=t.trim();impUrl(t.trim());return}
   const rows=(h&&htmlRows(h))||parseDelim(t,t.includes('\t')?'\t':',');e.target.value=t.slice(0,2000);impLoad([{name:'貼り付けた表',rows}])},true);
+function impUrl(u){TIM.sheets=[];$('#timGo').disabled=true;const g=/docs\.google\.com\/spreadsheets/.test(u);
+  $('#timBody').innerHTML=`<div class="impurl"><b>URLが貼り付けられました。URLだけでは中身を読み込めません。</b>
+    <p>${g?'Googleスプレッドシートは会社のアカウントでしか開けないため、アプリから直接は読めません。':''}次の手順で<b>表の中身</b>をコピーして貼り付けてください。</p>
+    <ol><li>${g?`<a href="${esc(u)}" target="_blank" rel="noopener">このスプレッドシートを開く ↗</a>`:'元の表を開く'}（取り込みたいシートのタブを選ぶ）</li><li>表のどこかをクリックして <b>⌘A</b>（全部を選択）→ <b>⌘C</b>（コピー）</li><li>このアプリに戻り、上の①の枠をクリックして <b>⌘V</b></li></ol>
+    <p class="hint">または、スプレッドシートの「ファイル → ダウンロード → Microsoft Excel（.xlsx）」で保存したファイルを②で選んでも読み込めます。</p></div>`}
 async function impFile(inp){const f=inp.files[0];if(!f)return;try{
   if(/\.(csv|tsv|txt)$/i.test(f.name)){const t=await f.text();impLoad([{name:f.name,rows:parseDelim(t,/\.tsv$/i.test(f.name)||t.includes('\t')?'\t':',')}]);return}
   const wb=new ExcelJS.Workbook();await wb.xlsx.load(await f.arrayBuffer());const sh=[];
@@ -36301,7 +36308,7 @@ function impRecords(){const S=TIM.sheets[TIM.si],R=S.rows;
   if(TIM.mode==='cols'){const row=R[TIM.pr]||[];return {head:['所属','名前','役割'],recs:row.map(x=>PERSON_RE.exec(x)).filter(Boolean).map(m=>[m[1].trim(),m[2].trim(),m[3].trim()])}}
   const head=(R[TIM.hr]||[]).map((x,i)=>x||'（'+(i+1)+'列目）'),n=Math.max(...R.map(r=>r.length));while(head.length<n)head.push('（'+(head.length+1)+'列目）');
   let recs=R.slice(TIM.hr+1).filter(r=>r.some(x=>x));return {head,recs}}
-const IMP_KEYS=[[/氏名|名前|name|キャスト|担当者|スタッフ名/i,0],[/所属|会社|社名|company|事務所/i,1],[/役割|ポジション|担当|role|役職|position|キャラ/i,2],[/電話|tel|携帯|phone/i,3],[/系統|ch|チャンネル/i,4],[/備考|メモ|note/i,5]];
+const IMP_KEYS=[[/氏名|名前|name|キャスト|担当者|スタッフ名/i,0],[/所属|会社|社名|company|事務所/i,1],[/役割|ポジション|担当|role|役職|position|キャラ|区分|職種|パート/i,2],[/電話|tel|携帯|phone/i,3],[/系統|ch|チャンネル/i,4],[/備考|メモ|note/i,5]];
 function impAuto(){const T=impTarget(),{head}=impRecords(),used=new Set();
   const kind=t=>{const k=IMP_KEYS.find(([re])=>re.test(t));return k?k[1]:-1};
   TIM.map=(T.columns||[]).map(c=>{const nm=c.name||'';if(/^no\.?$|^番号$|^#$/i.test(nm.trim()))return 'seq';const k=kind(nm);if(k<0||k===4)return '';
