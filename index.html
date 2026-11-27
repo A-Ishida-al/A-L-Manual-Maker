@@ -96,6 +96,8 @@ table.ed textarea{min-height:30px;height:30px;resize:vertical}
 .lbot{position:absolute;left:0;right:0;bottom:-10px;height:10px;cursor:row-resize;touch-action:none;z-index:2}.lbot i{left:0;right:0;top:3px;height:4px}
 .cfList{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 14px;font-size:12.5px}.cfCol{background:#f6f6f6;border-radius:8px;padding:10px 12px;max-height:240px;overflow:auto}
 .cfCol ul{margin:6px 0 0;padding-left:18px}.cfCol li{margin:2px 0}.cfWarn{grid-column:1/-1;margin:0;color:var(--red);font-weight:600}
+.varwarn{background:#fff8e1;border:1px solid #f0d27a;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12.5px}.varwarn p{margin:0 0 6px}
+.varwarn .vw{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #eadca8;border-radius:6px;padding:4px 8px;margin:0 6px 6px 0}.varwarn .vw small{color:#888}.varwarn select{font-size:12px}
 .impbar{display:flex;gap:10px;align-items:center;margin:2px 0 12px}
 .impsrc{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px}.impsrc>div{background:#f7f7f7;border-radius:8px;padding:12px}.impsrc p{margin:4px 0 8px}.impsrc textarea{width:100%;font-size:12px}
 .impopt{display:flex;gap:12px;flex-wrap:wrap}.impopt .f{min-width:220px}
@@ -301,7 +303,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-43</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-44</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -35157,9 +35159,10 @@ function renderInfo(){
     </div>
     <div class="card"><h2>共通項目（本文中の {{名前}} に差し込まれます）</h2>
       <table class="ed"><tr><th style="width:38%">項目名</th><th>内容</th><th></th></tr>
-      ${I.vars.map((v,i)=>`<tr><td><input type="text" value="${esc(v.key)}" oninput="P.info.vars[${i}].key=this.value;save()"></td><td><input type="text" value="${esc(v.value)}" oninput="P.info.vars[${i}].value=this.value;save()"></td><td><button class="ghost" onclick="P.info.vars.splice(${i},1);save();render()">×</button></td></tr>`).join('')}
+      ${I.vars.map((v,i)=>`<tr><td><input type="text" value="${esc(v.key)}" oninput="P.info.vars[${i}].key=this.value.replace(/[{}]/g,'').trim();save()" onchange="render()"></td><td><input type="text" value="${esc(v.value)}" oninput="P.info.vars[${i}].value=this.value;save()"></td><td><button class="ghost" onclick="P.info.vars.splice(${i},1);save();render()">×</button></td></tr>`).join('')}
       </table><button class="sm" onclick="P.info.vars.push({key:'',value:''});save();render()">＋ 項目を追加</button>
-      <p class="hint">例：「{{運営統括}}へ連絡」と書くと、Word書き出し時に「櫻田 賢人へ連絡」になります。</p>
+      ${varWarn()}
+      <p class="hint">例：「{{運営統括}}へ連絡」と書くと、Word書き出し時に「國府島 誠へ連絡」になります。項目名は本文の {{ }} の中と<b>一字一句同じ</b>にしてください。</p>
     </div>
   </div>
   <div class="card"><h2>実施概要</h2>
@@ -35476,6 +35479,13 @@ function blocksEditor(d){
     <button class="sm" onclick="blkAdd('text')">＋ 文章</button><button class="sm" onclick="blkAdd('table')">＋ 表</button><button class="sm" onclick="blkAdd('image')">＋ 画像</button><button class="sm" onclick="blkAdd('org')">＋ 体制図</button>${days.length?`<button class="sm" onclick="blkAdd('schedule')">＋ 香盤表</button>`:''}</div>`;
   return h;
 }
+// 本文で {{名前}} が使われているのに共通項目にない／共通項目にあるのに使われていない
+function varUse(){const j=JSON.stringify({o:P.info.overview,s:P.sections,c:P.info.coverLines,h:P.info.headerText,sc:P.schedule},(k,v)=>k==='dataUrl'?undefined:v),u={};let m;const re=/\{\{([^}]+)\}\}/g;while((m=re.exec(j)))u[m[1]]=(u[m[1]]||0)+1;return u}
+function varWarn(){const u=varUse(),have=new Set(P.info.vars.map(v=>v.key));const miss=Object.keys(u).filter(k=>!have.has(k)&&k!=='イベント名');
+  const unused=P.info.vars.filter(v=>v.key&&!u[v.key]&&!['主催','会場名','会場住所','開催日'].includes(v.key)).map(v=>v.key);
+  if(!miss.length&&!unused.length)return '';
+  return `<div class="varwarn">${miss.length?`<p><b>⚠ 本文で使われているのに、共通項目にない名前があります</b>（このままだと黄色の〔 〕で書き出されます）</p><div>${miss.map(k=>`<span class="vw">{{${esc(k)}}} <small>${u[k]}か所</small> <button class="sm" onclick="P.info.vars.push({key:'${esc(k)}',value:''});save();render()">＋ 追加</button>${unused.length?`<select onchange="if(this.value!==''){P.info.vars[+this.value].key='${esc(k)}';save();render()}"><option value="">既存の項目名をこれに変える…</option>${P.info.vars.map((v,i)=>!u[v.key]&&v.key?`<option value="${i}">「${esc(v.key)}」→「${esc(k)}」</option>`:'').join('')}</select>`:''}</span>`).join('')}</div>`:''}
+    ${unused.length?`<p class="hint" style="margin-top:6px">本文で使われていない項目：${unused.map(k=>'{{'+esc(k)+'}}').join('　')}</p>`:''}</div>`}
 function toBlocks(img){const s=curSec();if(!s||s.kind!=='text')return;const body=(s.data&&s.data.body)||'';s.kind='blocks';s.data={blocks:[{type:'text',body},{type:'image',images:img?[{slot:img,w:16,h:11}]:[],width:100}]};s.pages='auto';save();render();toast('画像・表を足せる形にしました')}
 function blkAdd(t){const bl=curSec().data.blocks;bl.push(t==='text'?{type:'text',body:'■ 見出し\n・本文'}:t==='table'?{type:'table',header:true,columns:[{name:'項目',w:2,align:'left'},{name:'内容',w:5,align:'left'}],rows:[['','']]}:t==='image'?{type:'image',images:[],width:100}:t==='org'?OMTpl.orgDefault():{type:'schedule',dayId:(P.schedule.days[0]||{}).id});save();renderSecEd()}
 function blkMv(i,dir){const a=curSec().data.blocks,j=i+dir;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();renderSecEd()}
