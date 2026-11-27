@@ -77,6 +77,12 @@ table.ed textarea{min-height:30px;height:30px;resize:vertical}
 .imgs{display:flex;flex-wrap:wrap;gap:10px}
 .imgs .im{position:relative;border:1px solid var(--line);border-radius:6px;padding:4px;background:#fafafa}
 .imgs img{max-height:120px;max-width:220px;display:block}
+.szc{flex:0 0 300px}.szc b{margin-left:6px;color:var(--red)}.szr{display:flex;align-items:center;gap:6px}.szr input{flex:1}
+.orged{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#fcfcfc}
+.orgrow{display:flex;align-items:flex-start;gap:6px;padding:4px 0 4px calc(var(--d)*28px);border-bottom:1px dashed #eee}.orgrow:last-child{border-bottom:0}
+.orgrow .og{width:14px;color:#aaa;padding-top:6px}.orgrow .orole{flex:0 0 170px;font-weight:600}.orgrow .oname{flex:1;min-width:140px;resize:vertical;min-height:30px;font-size:12.5px}
+.orgrow .oops{display:flex;gap:3px;flex-wrap:wrap;flex:0 0 auto}.orgrow .oops .sm{padding:3px 7px}
+.orgpv{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;margin:0 auto}.orgpv img{width:100%;display:block}
 .imgs.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:760px}
 .imgs.g2 .im{display:flex;flex-direction:column}
 .imgs.g2 img{max-width:none;max-height:none;width:100%;aspect-ratio:var(--ar);object-fit:contain;background:#eee}
@@ -276,7 +282,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-36</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-37</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -31080,6 +31086,14 @@ MAX: 9026 };
   };
 
   // ---------- セクション生成 ----------
+  // 運営体制図（指揮系統）の初期形
+  function orgDefault() {
+    const N = (role, name, children = []) => ({ id: uid(), role, name, children });
+    return { type: 'org', width: 100, nodes: [N('主催', '{{主催}}', [N('運営統括', 'A&L Project株式会社\n{{運営統括}}', [
+      N('制作', '{{制作担当}}'), N('進行', '〔氏名〕'),
+      N('受付（AD）', '〔氏名〕', [N('受付スタッフ', '〔人数〕名')]),
+      N('誘導（AD）', '〔氏名〕', [N('誘導スタッフ', '〔人数〕名')])])])] };
+  }
   const S = (kind, group, title, data = {}, extra = {}) => ({ id: uid(), kind, group, title, enabled: true, pages: 1, data, ...extra });
   const tbl = (cols, rows, before = '', after = '') => ({ columns: cols.map(([name, w, align]) => ({ name, w, align })), rows, before, after });
 
@@ -31129,7 +31143,7 @@ MAX: 9026 };
         { type: 'text', body: TXT.stdVenue },
         { type: 'image', images: [{ slot: '会場外観・会場写真', w: 16, h: 10 }, { slot: 'アクセスマップ', w: 16, h: 10 }], width: 100 }] }, { pages: 'auto' }),
       stdOrg: () => S('blocks', '体制・連絡', '運営体制図', { blocks: [
-        { type: 'image', images: [{ slot: '運営体制図（指揮系統）', w: 16, h: 13 }], width: 100, tall: true },
+        orgDefault(),
         { type: 'text', body: TXT.stdOrgAfter }] }, { pages: 'auto' }),
       stdStaff: () => S('table', '体制・連絡', 'スタッフリスト／トランシーバー系統', tbl(
         [['NO.', 0.8, 'center'], ['役割／ポジション', 2.5, 'left'], ['所属（敬称略）', 2, 'left'], ['氏名（敬称略）', 2.5, 'left'], ['系統1', 0.9, 'center'], ['系統2', 0.9, 'center'], ['系統3', 0.9, 'center']],
@@ -31252,7 +31266,7 @@ MAX: 9026 };
     return { id: uid(), title, columns: (columns || [{ name: '会場' }, { name: '施工' }, { name: 'クライアント' }, { name: 'A&L運営' }]).map((c) => ({ name: c.name })), blocks: [], points: '' };
   }
 
-  return { uid, FONT_PRESETS, EN_PRESETS, SNIPPETS, TXT, sectionCatalog, CATALOG_LABELS, TEMPLATES, newProject, newDay };
+  return { uid, orgDefault, FONT_PRESETS, EN_PRESETS, SNIPPETS, TXT, sectionCatalog, CATALOG_LABELS, TEMPLATES, newProject, newDay };
 });
 </script>
 <script>/* 運営マニュアル Word 生成エンジン
@@ -31806,6 +31820,7 @@ MAX: 9026 };
         if (b.type === 'text') out.push(...markup(b.body || ''));
         else if (b.type === 'table') { out.push(spacer(80)); out.push(...tableBlock(b)); out.push(spacer(140)); }
         else if (b.type === 'image') out.push(...imageRow(b));
+        else if (b.type === 'org') { const im = b._png; if (im) { const p = image(im, Math.round(CW * Math.min(100, Math.max(20, Number(b.width) || 100)) / 100), Math.round(CH * 0.85)); if (p) out.push(p, spacer(120)); } }
         else if (b.type === 'schedule') {
           const day = ((project.schedule || {}).days || []).find((d) => d.id === b.dayId);
           if (day) {
@@ -31969,7 +31984,7 @@ MAX: 9026 };
         let pages = 0, h = 0;
         (d.blocks || []).forEach((b) => {
           if (b.type === 'schedule') { if (h > 0) pages += fit(h); const dd = ((project.schedule || {}).days || []).find((x) => x.id === b.dayId); pages += dd && dd.type === 'list' ? estimateListPages(dd) : 1; h = 0; return; }
-          h += b.type === 'text' ? textH(b.body) : b.type === 'table' ? tableH(b) : imageH(b);
+          h += b.type === 'text' ? textH(b.body) : b.type === 'table' ? tableH(b) : b.type === 'org' ? (b._png ? Math.min(CH * 0.85, CW * (Number(b.width) || 100) / 100 * b._png.h / b._png.w) + 200 : CH * 0.5) : imageH(b);
         });
         if (h > 0 || !pages) pages += fit(h);
         return pages;
@@ -32037,7 +32052,7 @@ MAX: 9026 };
     });
   }
 
-  return { build, PALETTE, paletteList, paletteMap, toMin, toHM, toHHMM, scheduleSlots };
+  return { build, vars, sub, PALETTE, paletteList, paletteMap, toMin, toHM, toHHMM, scheduleSlots };
 });
 </script>
 <script>/* 既存の運営マニュアル（.docx）→ アプリ形式 変換
@@ -35347,7 +35362,7 @@ function tableEditor(d,bi=null){
 }
 let PASTE_BI=null;
 const tblObj=(bi)=>bi==null?curSec().data:curSec().data.blocks[bi];
-const BLK_LABEL={text:'文章',table:'表',image:'画像',schedule:'香盤表'};
+const BLK_LABEL={text:'文章',table:'表',image:'画像',schedule:'香盤表',org:'体制図'};
 function blocksEditor(d){
   const bl=d.blocks||(d.blocks=[]);
   const days=P.schedule.days;
@@ -35357,20 +35372,21 @@ function blocksEditor(d){
       <button class="ghost sm" onclick="blkMv(${bi},-1)">↑</button><button class="ghost sm" onclick="blkMv(${bi},1)">↓</button><button class="ghost sm" onclick="blkDel(${bi})">削除</button></h2>`;
     if(b.type==='text')h+=textField('body',b.body,false,bi);
     else if(b.type==='table')h+=tableEditor(b,bi);
-    else if(b.type==='image'){const rt=blkRatio(b);h+=`<div class="imgs g2" style="--ar:${rt==='orig'?'auto':RATIOS[rt].css}">${(b.images||[]).map((im,k)=>imgTile(im,'bimg',k,bi,`curSec().data.blocks[${bi}].images`)).join('')}</div>
+    else if(b.type==='image'){const rt=blkRatio(b);h+=`<div class="imgs g2" id="imgs${bi}" style="--ar:${rt==='orig'?'auto':RATIOS[rt].css};max-width:${Math.round(760*(b.width||100)/100)}px">${(b.images||[]).map((im,k)=>imgTile(im,'bimg',k,bi,`curSec().data.blocks[${bi}].images`)).join('')}</div>
       <div class="row" style="margin-top:10px;align-items:flex-end;gap:12px"><label class="f" style="flex:0 0 230px"><span>画像の形（全部この形にそろえます）</span><select onchange="setBlkRatio(${bi},this.value)">${Object.entries(RATIOS).map(([k,v])=>`<option value="${k}" ${rt===k?'selected':''}>${v.l}</option>`).join('')}<option value="orig" ${rt==='orig'?'selected':''}>元の形のまま（そろえない）</option></select></label>
-      <label class="f" style="flex:0 0 190px"><span>横幅（本文幅に対する％）</span><input type="number" min="10" max="100" step="5" value="${b.width||100}" oninput="curSec().data.blocks[${bi}].width=Number(this.value)||100;save()"></label>
+      ${sizeCtl(b,bi,`imgs${bi}`)}
       <div class="hint">横に2枚まで並び、3枚目からは次の段に並びます。「トリミング」で写す範囲を調整、ドラッグか ◀ ▶ で並べ替えできます。<br><input type="file" accept="image/*,application/pdf,.pdf" multiple onchange="blkAddImgs(${bi},this)"></div></div>`;}
     if(b.type==='image')h+=`<div class="pasteZone" data-paste="blk" data-bi="${bi}"><b>スクリーンショットを貼り付け：</b>この枠をクリックして ⌘V／画像ファイルをここにドラッグ<button class="sm" onclick="event.stopPropagation();pasteFromClipboard('blk',${bi})">クリップボードから貼り付け</button></div>`;
+    else if(b.type==='org')h+=orgEditor(b,bi);
     else if(b.type==='schedule')h+=`<label class="f"><span>入れる日程</span><select onchange="curSec().data.blocks[${bi}].dayId=this.value;save()">${days.map(x=>`<option value="${x.id}" ${x.id===b.dayId?'selected':''}>${esc(x.title)}</option>`).join('')}</select></label>
       <p class="hint">この位置に香盤表が1ページで入ります。内容は「香盤表」タブで編集します。</p><button class="sm" onclick="DAY=Math.max(0,P.schedule.days.findIndex(x=>x.id==='${b.dayId}'));TAB='sched';render()">香盤表を編集する →</button>`;
     h+=`</div>`;
   });
   h+=`<div class="card" style="display:flex;gap:8px;align-items:center"><span class="hint">ブロックを追加：</span>
-    <button class="sm" onclick="blkAdd('text')">＋ 文章</button><button class="sm" onclick="blkAdd('table')">＋ 表</button><button class="sm" onclick="blkAdd('image')">＋ 画像</button>${days.length?`<button class="sm" onclick="blkAdd('schedule')">＋ 香盤表</button>`:''}</div>`;
+    <button class="sm" onclick="blkAdd('text')">＋ 文章</button><button class="sm" onclick="blkAdd('table')">＋ 表</button><button class="sm" onclick="blkAdd('image')">＋ 画像</button><button class="sm" onclick="blkAdd('org')">＋ 体制図</button>${days.length?`<button class="sm" onclick="blkAdd('schedule')">＋ 香盤表</button>`:''}</div>`;
   return h;
 }
-function blkAdd(t){const bl=curSec().data.blocks;bl.push(t==='text'?{type:'text',body:'■ 見出し\n・本文'}:t==='table'?{type:'table',header:true,columns:[{name:'項目',w:2,align:'left'},{name:'内容',w:5,align:'left'}],rows:[['','']]}:t==='image'?{type:'image',images:[],width:100}:{type:'schedule',dayId:(P.schedule.days[0]||{}).id});save();renderSecEd()}
+function blkAdd(t){const bl=curSec().data.blocks;bl.push(t==='text'?{type:'text',body:'■ 見出し\n・本文'}:t==='table'?{type:'table',header:true,columns:[{name:'項目',w:2,align:'left'},{name:'内容',w:5,align:'left'}],rows:[['','']]}:t==='image'?{type:'image',images:[],width:100}:t==='org'?OMTpl.orgDefault():{type:'schedule',dayId:(P.schedule.days[0]||{}).id});save();renderSecEd()}
 function blkMv(i,dir){const a=curSec().data.blocks,j=i+dir;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();renderSecEd()}
 function blkDel(i){if(!confirm('このブロックを削除しますか？'))return;curSec().data.blocks.splice(i,1);save();renderSecEd()}
 async function blkAddImgs(bi,inp){const b=curSec().data.blocks[bi];b.images=b.images||[];for(const f of inp.files){try{b.images.push(...await readImages(f))}catch(e){toast(f.name+' を読み込めませんでした')}}save();renderSecEd()}
@@ -35763,7 +35779,7 @@ async function applyImport(){if(P&&P.sections&&P.sections.length)await saveToHis
 // =========================================================
 // ライブラリ（書き出し履歴・テンプレート）
 // =========================================================
-function ensureMeta(p){p.meta=p.meta||{};if(p.info){p.info.vars=p.info.vars||[];['開催日','会場住所','会場名','主催'].forEach(k=>{if(!p.info.vars.some(v=>v.key===k))p.info.vars.unshift({key:k,value:''})})}if(!p.meta.id)p.meta.id=OMTpl.uid()+OMTpl.uid();if(!p.meta.created)p.meta.created=new Date().toISOString();return p}
+function ensureMeta(p){p.meta=p.meta||{};(p.sections||[]).forEach(sc=>{const bl=sc.data&&sc.data.blocks;if(bl)bl.forEach((b,i)=>{if(b&&b.type==='image'&&(b.images||[]).length===1&&b.images[0].slot==='運営体制図（指揮系統）'&&!b.images[0].dataUrl)bl[i]=OMTpl.orgDefault()})});if(p.info){p.info.vars=p.info.vars||[];['開催日','会場住所','会場名','主催'].forEach(k=>{if(!p.info.vars.some(v=>v.key===k))p.info.vars.unshift({key:k,value:''})})}if(!p.meta.id)p.meta.id=OMTpl.uid()+OMTpl.uid();if(!p.meta.created)p.meta.created=new Date().toISOString();return p}
 async function libIndex(){if(CLOUD)return CLIB.slice();try{const s=await idbGet('lib_index');return s?JSON.parse(s):[]}catch(e){return[]}}
 async function libSaveIndex(ix){await idbPut('lib_index',JSON.stringify(ix))}
 async function libPut(entry,project){
@@ -35987,7 +36003,7 @@ function todoFields(s){
   ['body','before','after'].forEach(k=>{if(typeof d[k]==='string')add(()=>d[k],v=>{d[k]=v},'')});
   const tbl=(t,where)=>{(t.rows||[]).forEach((row,ri)=>row.forEach((c,ci)=>{if(typeof c==='string')add(()=>row[ci],v=>{row[ci]=v},where+'表 '+(ri+1)+'行目')}))};
   if(s.kind==='table')tbl(d,'');
-  (d.blocks||[]).forEach((b,bi)=>{if(b.type==='text')add(()=>b.body,v=>{b.body=v},'');if(b.type==='table')tbl(b,'');if(b.type==='table'&&typeof b.before==='string')add(()=>b.before,v=>{b.before=v},'')});
+  (d.blocks||[]).forEach((b,bi)=>{if(b.type==='text')add(()=>b.body,v=>{b.body=v},'');if(b.type==='table')tbl(b,'');if(b.type==='table'&&typeof b.before==='string')add(()=>b.before,v=>{b.before=v},'');if(b.type==='org')orgEach(b.nodes,n=>{add(()=>n.role,v=>{n.role=v},'体制図');add(()=>n.name,v=>{n.name=v},'体制図：'+(n.role||''))})});
   return F;
 }
 function todoList(s){const out=[];todoFields(s).forEach((f,fi)=>{const t=String(f.get()||'');let m,n=0;TODO_RE.lastIndex=0;while((m=TODO_RE.exec(t))){out.push({f,fi,n:n++,label:m[0],ctx:t.slice(Math.max(0,m.index-18),m.index).split('\n').pop()})}});return out}
@@ -36145,6 +36161,69 @@ function imgTile(im,key,k,a,arr){
 function ovImgOK(r){return /集合/.test(r.label||'')||(r.images||[]).length>0}
 async function ovAddImgs(i,inp){const r=P.info.overview[i];r.images=r.images||[];for(const f of inp.files){try{r.images.push(...await readImages(f))}catch(e){toast('画像を読み込めませんでした')}}save();render();toast('画像を追加しました')}
 function reImgs(){if(TAB==='manual')renderSecEd();else render()}
+// ---------- 大きさ（本文幅に対する％） ----------
+function sizeCtl(b,bi,target){const w=b.width||100;return `<label class="f szc"><span>大きさ（本文の横幅に対して）<b id="szv${bi}">${w}%</b></span><span class="szr"><button class="ghost sm" onclick="szStep(${bi},-10,'${target}')">－</button><input type="range" min="20" max="100" step="5" value="${w}" id="szr${bi}" oninput="szSet(${bi},this.value,'${target}')"><button class="ghost sm" onclick="szStep(${bi},10,'${target}')">＋</button></span></label>`}
+function szSet(bi,v,target){v=Math.max(20,Math.min(100,Number(v)||100));const b=curSec().data.blocks[bi];b.width=v;$('#szv'+bi).textContent=v+'%';$('#szr'+bi).value=v;const el=$('#'+target);if(el)el.style.maxWidth=Math.round(760*v/100)+'px';save()}
+function szStep(bi,d,target){szSet(bi,(curSec().data.blocks[bi].width||100)+d,target)}
+// ---------- 運営体制図（指揮系統） ----------
+function orgEach(ns,cb,dep=0,par=null){(ns||[]).forEach((n,i)=>{cb(n,dep,par,ns,i);orgEach(n.children,cb,dep+1,n)})}
+function orgFind(b,id){let r=null;orgEach(b.nodes,(n,d,par,arr,i)=>{if(n.id===id)r={n,par,arr,i}});return r}
+function orgEditor(b,bi){
+  let rows='';
+  orgEach(b.nodes,(n,d,par,arr,i)=>{rows+=`<div class="orgrow" style="--d:${d}"><span class="og">${d?'└':''}</span>
+    <input type="text" class="orole" value="${esc(n.role||'')}" placeholder="役職名" oninput="orgSet(${bi},'${n.id}','role',this.value)">
+    <textarea class="oname" rows="${Math.max(1,String(n.name||'').split('\n').length)}" placeholder="名前（改行で2行に）" oninput="this.rows=Math.max(1,this.value.split('\\n').length);orgSet(${bi},'${n.id}','name',this.value)">${esc(n.name||'')}</textarea>
+    <span class="oops"><button class="sm" onclick="orgOp(${bi},'${n.id}','child')" title="この下に枝分かれを追加">＋ 下に枝分かれ</button><button class="sm" onclick="orgOp(${bi},'${n.id}','sib')" title="同じ階層に追加">＋ 横に追加</button>
+    <button class="ghost sm" onclick="orgOp(${bi},'${n.id}','up')" title="上へ" ${i===0?'disabled':''}>↑</button><button class="ghost sm" onclick="orgOp(${bi},'${n.id}','down')" title="下へ" ${i===arr.length-1?'disabled':''}>↓</button>
+    <button class="ghost sm" onclick="orgOp(${bi},'${n.id}','out')" title="ひとつ上の階層へ" ${d===0?'disabled':''}>←</button><button class="ghost sm" onclick="orgOp(${bi},'${n.id}','in')" title="すぐ上の項目の下へ（階層を下げる）" ${i===0?'disabled':''}>→</button>
+    <button class="ghost sm" onclick="orgOp(${bi},'${n.id}','del')">削除</button></span></div>`});
+  setTimeout(()=>orgPreview(bi),0);
+  return `<p class="hint" style="margin:0 0 8px">役職名と名前を入れてください。「＋ 下に枝分かれ」で部下を、「＋ 横に追加」で同じ階層の役職を足せます。← → で階層を上げ下げ、↑ ↓ で順番を変えられます。</p>
+    <div class="orged">${rows||'<p class="hint">項目がありません</p>'}</div>
+    <div style="margin:8px 0 12px"><button class="sm" onclick="orgOp(${bi},null,'root')">＋ 一番上に項目を追加</button></div>
+    <div class="orgpv" id="orgpvw${bi}" style="max-width:${Math.round(760*(b.width||100)/100)}px"><img id="orgpv${bi}" alt=""></div>
+    <div class="row" style="margin-top:10px">${sizeCtl(b,bi,'orgpvw'+bi)}</div>`;
+}
+function orgSet(bi,id,k,v){const b=curSec().data.blocks[bi],f=orgFind(b,id);if(!f)return;f.n[k]=v;save();clearTimeout(window._orgT);window._orgT=setTimeout(()=>orgPreview(bi),250)}
+function orgOp(bi,id,op){
+  const b=curSec().data.blocks[bi];b.nodes=b.nodes||[];const N=()=>({id:OMTpl.uid(),role:'',name:'',children:[]});
+  if(op==='root'){b.nodes.push(N());save();renderSecEd();return}
+  const f=orgFind(b,id);if(!f)return;const {n,par,arr,i}=f;
+  if(op==='child'){(n.children=n.children||[]).push(N())}
+  else if(op==='sib')arr.splice(i+1,0,N());
+  else if(op==='up'&&i>0)[arr[i-1],arr[i]]=[arr[i],arr[i-1]];
+  else if(op==='down'&&i<arr.length-1)[arr[i+1],arr[i]]=[arr[i],arr[i+1]];
+  else if(op==='in'&&i>0){arr.splice(i,1);(arr[i-1].children=arr[i-1].children||[]).push(n)}
+  else if(op==='out'&&par){const g=orgFind(b,par.id);arr.splice(i,1);g.arr.splice(g.i+1,0,n)}
+  else if(op==='del'){if((n.children||[]).length&&!confirm('「'+(n.role||'この項目')+'」の下の項目もまとめて削除されます。よろしいですか？'))return;arr.splice(i,1)}
+  save();renderSecEd();
+}
+function orgPreview(bi){const b=(curSec()&&curSec().data.blocks||[])[bi],img=$('#orgpv'+bi);if(!b||!img||b.type!=='org')return;orgPng(b,true);img.src=b._png?b._png.dataUrl:''}
+// 体制図を画像にする（Word・PPT・プレビュー共通）。保存データには入れない（毎回作り直す）
+function orgPng(b,editor){
+  const V=OMGen.vars(P),T=t=>OMGen.sub(t,V),F=`"${(P.fonts&&P.fonts.ja)||'Yu Gothic'}", "Hiragino Sans", "Yu Gothic", sans-serif`;
+  const K=3,FS=10.5,LH=15,PADX=8,MINW=96,MAXW=176,GX=14,GY=30,HDR='#404040';
+  const cv=document.createElement('canvas'),g=cv.getContext('2d');
+  const wrap=(t,font)=>{g.font=font;const out=[];String(t||'').split('\n').forEach(l=>{let cur='';for(const ch of l){if(g.measureText(cur+ch).width>MAXW-PADX*2&&cur){out.push(cur);cur=ch}else cur+=ch}out.push(cur)});return out};
+  const FB=`bold ${FS}px ${F}`,FN=`${FS}px ${F}`;
+  const prep=n=>{n._r=wrap(T(n.role),FB);n._n=wrap(T(n.name),FN);g.font=FB;let w=Math.max(...n._r.map(x=>g.measureText(x).width));g.font=FN;w=Math.max(w,...n._n.map(x=>g.measureText(x).width));n._w=Math.max(MINW,Math.min(MAXW,w+PADX*2));n._hh=n._r.length*LH+6;n._h=n._hh+n._n.length*LH+10;(n.children||[]).forEach(prep);
+    const c=n.children||[];n._sw=Math.max(n._w,c.reduce((a,x)=>a+x._sw,0)+GX*Math.max(0,c.length-1))};
+  const ns=b.nodes||[];if(!ns.length){b._png=null;return}
+  ns.forEach(prep);const LV=[];orgEach(ns,(n,d)=>{LV[d]=Math.max(LV[d]||0,n._h)});const Y=[0];for(let d=1;d<LV.length;d++)Y[d]=Y[d-1]+LV[d-1]+GY;
+  const place=(n,x0,d)=>{n._x=x0+n._sw/2-n._w/2;n._y=Y[d];const c=n.children||[];const tot=c.reduce((a,x)=>a+x._sw,0)+GX*Math.max(0,c.length-1);let x=x0+n._sw/2-tot/2;c.forEach(k=>{place(k,x,d+1);x+=k._sw+GX})};
+  let x=0;ns.forEach(n=>{place(n,x,0);x+=n._sw+GX*2});
+  const PAD=4,W=x-GX*2+PAD*2,H=Y[LV.length-1]+LV[LV.length-1]+PAD*2;
+  cv.width=Math.ceil(W*K);cv.height=Math.ceil(H*K);g.scale(K,K);g.translate(PAD,PAD);g.fillStyle='#fff';g.fillRect(-PAD,-PAD,W,H);g.textBaseline='middle';g.textAlign='center';
+  g.strokeStyle='#222';g.lineWidth=1.2;
+  orgEach(ns,n=>{const c=n.children||[];if(!c.length)return;const cx=n._x+n._w/2,by=n._y+n._h,my=c[0]._y-GY/2;g.beginPath();g.moveTo(cx,by);g.lineTo(cx,my);
+    const xs=c.map(k=>k._x+k._w/2);g.moveTo(Math.min(cx,...xs),my);g.lineTo(Math.max(cx,...xs),my);xs.forEach((kx,j)=>{g.moveTo(kx,my);g.lineTo(kx,c[j]._y)});g.stroke()});
+  const txt=(t,x,y,font,color)=>{g.font=font;const parts=t.split(/(〔[^〕]*〕)/).filter(Boolean),tw=parts.reduce((a,p)=>a+g.measureText(p).width,0);let px=x-tw/2;g.textAlign='left';
+    parts.forEach(p=>{const w=g.measureText(p).width;if(/^〔/.test(p)){g.fillStyle='#ffef00';g.fillRect(px,y-LH/2+1,w,LH-2)}g.fillStyle=/^〔/.test(p)?'#000':color;g.fillText(p,px,y);px+=w})};
+  orgEach(ns,n=>{g.fillStyle='#fff';g.fillRect(n._x,n._y,n._w,n._h);g.fillStyle=HDR;g.fillRect(n._x,n._y,n._w,n._hh);g.lineWidth=1;g.strokeStyle='#222';g.strokeRect(n._x,n._y,n._w,n._h);
+    n._r.forEach((l,j)=>txt(l,n._x+n._w/2,n._y+3+LH*j+LH/2,FB,'#fff'));n._n.forEach((l,j)=>txt(l,n._x+n._w/2,n._y+n._hh+5+LH*j+LH/2,FN,'#000'))});
+  orgEach(ns,n=>{['_r','_n','_w','_h','_hh','_sw','_x','_y'].forEach(k=>delete n[k])});
+  Object.defineProperty(b,'_png',{value:{dataUrl:cv.toDataURL('image/png'),w:Math.round(W),h:Math.round(H)},enumerable:false,writable:true,configurable:true});
+}
 // ---------- 画像ブロック：形をそろえる・トリミング ----------
 const RATIOS={'4:3':{v:4/3,l:'横長（4：3）',css:'4/3'},'16:9':{v:16/9,l:'ワイド（16：9）',css:'16/9'},'3:2':{v:3/2,l:'写真（3：2）',css:'3/2'},'1:1':{v:1,l:'正方形（1：1）',css:'1/1'},'3:4':{v:3/4,l:'縦長（3：4）',css:'3/4'}};
 function blkRatio(b){return b.ratio||((b.images||[]).filter(x=>x&&(x.dataUrl||x.slot)).length>=2?'4:3':'orig')}
@@ -36165,7 +36244,7 @@ async function ensureBlockCrops(b){
     try{await applyCrop(im,centerCrop(W,H,RATIOS[rt].v),rt);ch=true}catch(e){console.warn(e)}}
   return ch;
 }
-async function ensureAllCrops(){let ch=false;for(const s of P.sections||[])for(const b of (s.data&&s.data.blocks)||[])if(b.type==='image'&&await ensureBlockCrops(b))ch=true;if(ch)save();return ch}
+async function ensureAllCrops(){let ch=false;try{await document.fonts.ready}catch(e){}for(const s of P.sections||[])for(const b of (s.data&&s.data.blocks)||[]){if(b.type==='image'&&await ensureBlockCrops(b))ch=true;if(b.type==='org')orgPng(b)}if(ch)save();return ch}
 let CROPBUSY=false;
 async function secCrops(){if(CROPBUSY)return;const s=curSec();if(!s||!s.data||!s.data.blocks)return;CROPBUSY=true;try{let ch=false;for(const b of s.data.blocks)if(b.type==='image'&&await ensureBlockCrops(b))ch=true;if(ch){save();if(TAB==='manual'&&curSec()===s)renderSecEd()}}finally{CROPBUSY=false}}
 async function setBlkRatio(bi,v){const b=curSec().data.blocks[bi];b.ratio=v;
