@@ -96,6 +96,7 @@ table.ed textarea{min-height:30px;height:30px;resize:vertical}
 .lbot{position:absolute;left:0;right:0;bottom:-10px;height:10px;cursor:row-resize;touch-action:none;z-index:2}.lbot i{left:0;right:0;top:3px;height:4px}
 .cfList{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 14px;font-size:12.5px}.cfCol{background:#f6f6f6;border-radius:8px;padding:10px 12px;max-height:240px;overflow:auto}
 .cfCol ul{margin:6px 0 0;padding-left:18px}.cfCol li{margin:2px 0}.cfWarn{grid-column:1/-1;margin:0;color:var(--red);font-weight:600}
+.varline{font-size:11.5px;color:#666;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}.varline:empty{display:none}.varline .vok b{color:#111}.varline .vng{color:var(--red);font-weight:600}
 .stk{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:13px}
 .varwarn{background:#fff8e1;border:1px solid #f0d27a;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12.5px}.varwarn p{margin:0 0 6px}
 .varwarn .vw{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #eadca8;border-radius:6px;padding:4px 8px;margin:0 6px 6px 0}.varwarn .vw small{color:#888}.varwarn select{font-size:12px}
@@ -305,7 +306,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-48</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-50</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -35432,8 +35433,12 @@ let lastTA=null;
 function textField(f,v,tall,bi){
   const sel=bi==null?`[data-f="${f}"]:not([data-b])`:`[data-f="${f}"][data-b="${bi}"]`;
   return `<div class="snips">${OMTpl.SNIPPETS.map((x,i)=>`<button onmousedown="event.preventDefault()" onclick="insSnip(${i},'${esc(sel)}')">＋${esc(x.label)}</button>`).join('')}</div>
-  <textarea data-f="${f}" ${bi!=null?`data-b="${bi}"`:''} class="${tall?'tall':''}" style="${bi!=null?`height:${Math.min(520,Math.max(90,(String(v||'').split('\n').length+1)*21))}px`:''}">${esc(v||'')}</textarea>`;
+  <textarea data-f="${f}" ${bi!=null?`data-b="${bi}"`:''} class="${tall?'tall':''}" style="${bi!=null?`height:${Math.min(520,Math.max(90,(String(v||'').split('\n').length+1)*21))}px`:''}">${esc(v||'')}</textarea><div class="varline">${varLine(v)}</div>`;
 }
+// 文章の {{名前}} に何が入るかを、入力欄のすぐ下に表示
+function varLine(t){const ks=[...new Set((String(t||'').match(/\{\{([^}]+)\}\}/g)||[]).map(x=>x.slice(2,-2)))];if(!ks.length)return '';const V=OMGen.vars(P);
+  return '差し込み：'+ks.map(k=>k in V&&V[k]!==''?`<span class="vok">{{${esc(k)}}} → <b>${esc(V[k])}</b></span>`:`<span class="vng" title="基本情報の「共通項目」に同じ名前の項目がありません">{{${esc(k)}}} → ${k in V?'内容が空です':'共通項目にありません'}</span>`).join('')}
+document.addEventListener('input',e=>{const t=e.target;if(t.matches&&t.matches('textarea[data-f]')){const n=t.nextElementSibling;if(n&&n.classList.contains('varline'))n.innerHTML=varLine(t.value)}});
 function insSnip(i,sel){const t=$('#secEd textarea'+sel);const txt=OMTpl.SNIPPETS[i].text;
   const a=t.selectionStart??t.value.length,b=t.selectionEnd??a;const pre=t.value.slice(0,a),post=t.value.slice(b);
   const add=(pre&&!pre.endsWith('\n')?'\n':'')+txt+(post&&!post.startsWith('\n')?'\n':'');t.value=pre+add+post;t.selectionStart=t.selectionEnd=(pre+add).length;t.focus();t.dispatchEvent(new Event('input'))}
@@ -36296,9 +36301,7 @@ function impUrl(u){TIM.sheets=[];$('#timGo').disabled=true;const g=/docs\.google
     <p class="hint">または、スプレッドシートの「ファイル → ダウンロード → Microsoft Excel（.xlsx）」で保存したファイルを②で選んでも読み込めます。</p></div>`}
 async function impFile(inp){const f=inp.files[0];if(!f)return;try{
   if(/\.(csv|tsv|txt)$/i.test(f.name)){const t=await f.text();impLoad([{name:f.name,rows:parseDelim(t,/\.tsv$/i.test(f.name)||t.includes('\t')?'\t':',')}]);return}
-  const wb=new ExcelJS.Workbook();await wb.xlsx.load(await f.arrayBuffer());const sh=[];
-  wb.eachSheet(ws=>{const rows=[];ws.eachRow({includeEmpty:true},(r,n)=>{const a=[];r.eachCell({includeEmpty:true},(c,k)=>{let v=c.text;if(v==null||typeof v==='object')v=c.value&&c.value.richText?c.value.richText.map(x=>x.text).join(''):String(c.value??'');a[k-1]=String(v)});rows[n-1]=Array.from(a,x=>x??'')});
-    sh.push({name:ws.name,rows:Array.from(rows,x=>x||[])})});impLoad(sh)}catch(e){console.error(e);toast('ファイルを読み込めませんでした（'+(e.message||e)+'）')}finally{inp.value=''}}
+  impLoad(await readXlsx(await f.arrayBuffer()))}catch(e){console.error(e);toast('ファイルを読み込めませんでした（'+(e.message||e)+'）')}finally{inp.value=''}}
 const PERSON_RE=/^\s*([^/／\n]+?)\s*[/／]\s*([^\n(（]+?)\s*[\n\s]*[(（]([^)）]+)[)）]\s*$/;
 // GoogleドライブのURLから読み込む（ログイン中のアカウントの権限で読む）
 let DRV_TOKEN=null;
@@ -36320,11 +36323,31 @@ async function impFromDrive(){
     else if(/sheet|excel|csv/.test(meta.mimeType)||/\.(xlsx|xlsm|csv)$/i.test(meta.name))buf=await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true`,true);
     else throw new Error('スプレッドシートではないファイルです（'+meta.mimeType+'）');
     let sheets;if(/csv/.test(meta.mimeType)||/\.csv$/i.test(meta.name)){const t=new TextDecoder().decode(buf);sheets=[{name:meta.name,rows:parseDelim(t,',')}]}
-    else{const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);sheets=[];wb.eachSheet(ws=>{if(ws.state&&ws.state!=='visible')return;const rows=[];ws.eachRow({includeEmpty:true},(r,n)=>{const a=[];r.eachCell({includeEmpty:true},(c,k)=>{let v=c.text;if(v==null||typeof v==='object')v=c.value&&c.value.richText?c.value.richText.map(x=>x.text).join(''):String(c.value??'');a[k-1]=String(v)});rows[n-1]=Array.from(a,x=>x??'')});sheets.push({name:ws.name,rows:Array.from(rows,x=>x||[])})})}
+    else sheets=await readXlsx(buf);
     impLoad(sheets);if(pick){const i=TIM.sheets.findIndex(x=>x.name===pick);if(i>0){TIM.si=i;impSheet()}}
     toast('「'+meta.name+'」を読み込みました');
   }catch(e){console.error(e);const t=String(e.message||e);
     msg(/popup|cancel/i.test(t)?'許可の画面が閉じられました。もう一度押してください':/403|404/.test(t)?'このファイルを開く権限がないか、読み込みの設定がまだ有効になっていません（'+t+'）':'読み込めませんでした：'+t)}}
+// Excelのセルを文字にする（数式・リンク・空の結果などで落ちないように）
+function cellStr(c){try{const t=c.text;if(t!=null&&typeof t!=='object')return String(t)}catch(e){}
+  try{const v=c.value;if(v==null)return '';if(typeof v!=='object')return String(v);if(v instanceof Date)return v.toLocaleDateString('ja-JP');
+    if(v.richText)return v.richText.map(x=>x.text||'').join('');if(v.text!=null)return typeof v.text==='object'&&v.text.richText?v.text.richText.map(x=>x.text||'').join(''):String(v.text);
+    if('result' in v)return v.result==null?'':typeof v.result==='object'&&v.result.error?'':String(v.result);if(v.error)return '';return ''}catch(e){return ''}}
+// ExcelJSで読む。シートごとに失敗しても他のシートは読む
+// ExcelJSで読めないファイル用の簡易読み込み（文字と数値だけ）
+async function readXlsxLite(buf){const zip=OMImport.readZip(new Uint8Array(buf)),td=new TextDecoder();
+  const file=async n=>{const e=zip.get(n);if(!e)return null;return td.decode(e.method===0?e.data:await inflateRaw(e.data))};const X=t=>new DOMParser().parseFromString(t,'application/xml');
+  const ss=[];const sst=await file('xl/sharedStrings.xml');if(sst)[...X(sst).getElementsByTagName('si')].forEach(si=>ss.push([...si.getElementsByTagName('t')].map(t=>t.textContent).join('')));
+  const wbx=X(await file('xl/workbook.xml')),rel=X(await file('xl/_rels/workbook.xml.rels')),rm={};[...rel.getElementsByTagName('Relationship')].forEach(r=>rm[r.getAttribute('Id')]=r.getAttribute('Target'));
+  const col=r=>{let n=0;for(const ch of r.replace(/\d+/g,''))n=n*26+ch.charCodeAt(0)-64;return n-1};const out=[];
+  for(const sh of wbx.getElementsByTagName('sheet')){if((sh.getAttribute('state')||'visible')!=='visible')continue;const id=sh.getAttribute('r:id')||sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+    let t=rm[id]||'';t=t.replace(/^\/?(xl\/)?/,'xl/');const x=await file(t);if(!x)continue;const rows=[];
+    for(const r of X(x).getElementsByTagName('row')){const ri=+r.getAttribute('r')-1,a=[];for(const c of r.getElementsByTagName('c')){const ty=c.getAttribute('t'),v=c.getElementsByTagName('v')[0],is=c.getElementsByTagName('is')[0];
+      let val=ty==='s'?(ss[+((v&&v.textContent)||0)]||''):ty==='inlineStr'?(is?is.textContent:''):(v?v.textContent:'');a[col(c.getAttribute('r'))]=val}rows[ri]=Array.from(a,z=>z??'')}
+    out.push({name:sh.getAttribute('name'),rows:Array.from(rows,z=>z||[])})}return out}
+async function readXlsx(buf){try{return await readXlsxFull(buf)}catch(e){console.warn('ExcelJS failed, fallback',e);return await readXlsxLite(buf)}}
+async function readXlsxFull(buf){const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);const sh=[];
+  wb.eachSheet(ws=>{try{if(ws.state&&ws.state!=='visible')return;const rows=[];ws.eachRow({includeEmpty:true},(r,n)=>{const a=[];r.eachCell({includeEmpty:true},(c,k)=>{a[k-1]=cellStr(c)});rows[n-1]=Array.from(a,x=>x??'')});sh.push({name:ws.name,rows:Array.from(rows,x=>x||[])})}catch(e){console.warn('sheet',ws.name,e)}});return sh}
 function impLoad(sheets){sheets=sheets.map(s=>({name:s.name,rows:s.rows.map(r=>r.map(x=>String(x??'').trim()))})).filter(s=>s.rows.some(r=>r.some(x=>x)));if(!sheets.length){toast('表の中身が見つかりませんでした');return}
   TIM.sheets=sheets;TIM.si=0;impSheet();}
 function impSheet(){const S=TIM.sheets[TIM.si],R=S.rows;
