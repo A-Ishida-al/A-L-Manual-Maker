@@ -305,7 +305,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-47</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-48</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -476,10 +476,10 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <div class="modal" id="timModal"><div class="box" style="width:min(1100px,94vw);max-height:92vh;overflow:auto">
   <h2>Excel・スプレッドシートから取り込む</h2>
   <div class="impsrc">
-    <div><b>① Googleスプレッドシート／Excelからコピーして貼り付け</b><p class="hint">元の表で取り込みたい範囲（シート全体なら ⌘A）を選んで ⌘C → 下の枠をクリックして ⌘V<br><b>URLではなく、セルの中身</b>をコピーしてください</p>
-      <textarea id="timPaste" placeholder="ここに表の中身を貼り付け（⌘V）※URLではなく、セルをコピーして貼ってください" rows="3" oninput="if(/^\s*https?:\/\//.test(this.value))impUrl(this.value.trim())"></textarea></div>
+    <div><b>① Googleスプレッドシート／Excelからコピーして貼り付け</b><p class="hint">元の表で取り込みたい範囲（シート全体なら ⌘A）を選んで ⌘C → 下の枠をクリックして ⌘V<br>GoogleスプレッドシートはURLを貼るだけでも読み込めます</p>
+      <textarea id="timPaste" placeholder="ここに表の中身（セル）またはGoogleスプレッドシートのURLを貼り付け（⌘V）" rows="3" oninput="if(/^\s*https?:\/\//.test(this.value))impUrl(this.value.trim())"></textarea></div>
     <div><b>② ファイルを選ぶ</b><p class="hint">Excel（.xlsx）・CSV</p><input type="file" accept=".xlsx,.xlsm,.csv,.tsv,.txt" onchange="impFile(this)">
-      <p class="hint" style="margin-top:8px">GoogleスプレッドシートのURLは直接読めないため、①の貼り付けか「ファイル → ダウンロード → .xlsx」で保存したファイルをお使いください。</p></div>
+      <p class="hint" style="margin-top:8px">GoogleスプレッドシートのURLを①に貼ると、そのまま読み込めます（共有版でログインしているとき）。</p></div>
   </div>
   <div id="timBody"></div>
   <div class="acts"><button onclick="$('#timModal').classList.remove('on')">キャンセル</button><button class="primary" id="timGo" onclick="impApply()" disabled>表に取り込む</button></div>
@@ -36286,7 +36286,10 @@ function htmlRows(h){const d=new DOMParser().parseFromString(h,'text/html'),t=d.
 document.addEventListener('paste',e=>{if(e.target.id!=='timPaste')return;const h=e.clipboardData.getData('text/html'),t=e.clipboardData.getData('text/plain');e.preventDefault();
   if(/^\s*https?:\/\/\S+\s*$/.test(t)&&!(h&&/<table/i.test(h))){e.target.value=t.trim();impUrl(t.trim());return}
   const rows=(h&&htmlRows(h))||parseDelim(t,t.includes('\t')?'\t':',');e.target.value=t.slice(0,2000);impLoad([{name:'貼り付けた表',rows}])},true);
-function impUrl(u){TIM.sheets=[];$('#timGo').disabled=true;const g=/docs\.google\.com\/spreadsheets/.test(u);
+function impUrl(u){TIM.sheets=[];$('#timGo').disabled=true;const g=/docs\.google\.com\/(spreadsheets|file)\/d\/|drive\.google\.com\/(file\/d\/|open\?id=)/.test(u);
+  if(g&&typeof CLOUD!=='undefined'&&CLOUD&&me){TIM.url=u;$('#timBody').innerHTML=`<div class="impurl"><b>GoogleスプレッドシートのURLです。</b>
+    <p>下のボタンを押すと、あなたのGoogleアカウントでこのファイルを読み込みます。初回だけ「Googleドライブのファイルの表示」を許可する画面が出ます。</p>
+    <p><button class="primary" onclick="impFromDrive()">このURLから読み込む</button> <span class="hint" id="impDrvMsg"></span></p></div>`;return}
   $('#timBody').innerHTML=`<div class="impurl"><b>URLが貼り付けられました。URLだけでは中身を読み込めません。</b>
     <p>${g?'Googleスプレッドシートは会社のアカウントでしか開けないため、アプリから直接は読めません。':''}次の手順で<b>表の中身</b>をコピーして貼り付けてください。</p>
     <ol><li>${g?`<a href="${esc(u)}" target="_blank" rel="noopener">このスプレッドシートを開く ↗</a>`:'元の表を開く'}（取り込みたいシートのタブを選ぶ）</li><li>表のどこかをクリックして <b>⌘A</b>（全部を選択）→ <b>⌘C</b>（コピー）</li><li>このアプリに戻り、上の①の枠をクリックして <b>⌘V</b></li></ol>
@@ -36297,6 +36300,31 @@ async function impFile(inp){const f=inp.files[0];if(!f)return;try{
   wb.eachSheet(ws=>{const rows=[];ws.eachRow({includeEmpty:true},(r,n)=>{const a=[];r.eachCell({includeEmpty:true},(c,k)=>{let v=c.text;if(v==null||typeof v==='object')v=c.value&&c.value.richText?c.value.richText.map(x=>x.text).join(''):String(c.value??'');a[k-1]=String(v)});rows[n-1]=Array.from(a,x=>x??'')});
     sh.push({name:ws.name,rows:Array.from(rows,x=>x||[])})});impLoad(sh)}catch(e){console.error(e);toast('ファイルを読み込めませんでした（'+(e.message||e)+'）')}finally{inp.value=''}}
 const PERSON_RE=/^\s*([^/／\n]+?)\s*[/／]\s*([^\n(（]+?)\s*[\n\s]*[(（]([^)）]+)[)）]\s*$/;
+// GoogleドライブのURLから読み込む（ログイン中のアカウントの権限で読む）
+let DRV_TOKEN=null;
+async function drvToken(force){
+  if(!force&&DRV_TOKEN&&DRV_TOKEN.exp>Date.now())return DRV_TOKEN.t;
+  const pr=new firebase.auth.GoogleAuthProvider();pr.addScope('https://www.googleapis.com/auth/drive.readonly');pr.setCustomParameters({hd:DOMAIN,login_hint:me.email});
+  const r=await firebase.auth().currentUser.reauthenticateWithPopup(pr);const t=r.credential&&r.credential.accessToken;if(!t)throw new Error('許可を取得できませんでした');
+  DRV_TOKEN={t,exp:Date.now()+50*60*1000};return t}
+async function impFromDrive(){
+  const u=TIM.url||'',m=u.match(/\/d\/([\w-]{20,})/)||u.match(/[?&]id=([\w-]{20,})/),gid=(u.match(/gid=(\d+)/)||[])[1];if(!m){toast('URLからファイルを特定できませんでした');return}
+  const id=m[1],msg=t=>{const e=$('#impDrvMsg');if(e)e.textContent=t};
+  try{msg('読み込んでいます…');let tok=await drvToken();
+    const api=async(url,raw)=>{let r=await fetch(url,{headers:{Authorization:'Bearer '+tok}});if(r.status===401){tok=await drvToken(true);r=await fetch(url,{headers:{Authorization:'Bearer '+tok}})}
+      if(!r.ok){let e='';try{e=(await r.json()).error.message}catch(x){}throw new Error(r.status+' '+e)}return raw?r.arrayBuffer():r.json()};
+    const meta=await api(`https://www.googleapis.com/drive/v3/files/${id}?fields=name,mimeType&supportsAllDrives=true`);
+    const XL='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';let buf,pick=null;
+    if(meta.mimeType==='application/vnd.google-apps.spreadsheet'){buf=await api(`https://www.googleapis.com/drive/v3/files/${id}/export?mimeType=${encodeURIComponent(XL)}`,true);
+      if(gid!=null){try{const sh=await api(`https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets.properties(sheetId,title)`);const f=sh.sheets.find(x=>String(x.properties.sheetId)===gid);if(f)pick=f.properties.title}catch(e){}}}
+    else if(/sheet|excel|csv/.test(meta.mimeType)||/\.(xlsx|xlsm|csv)$/i.test(meta.name))buf=await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true`,true);
+    else throw new Error('スプレッドシートではないファイルです（'+meta.mimeType+'）');
+    let sheets;if(/csv/.test(meta.mimeType)||/\.csv$/i.test(meta.name)){const t=new TextDecoder().decode(buf);sheets=[{name:meta.name,rows:parseDelim(t,',')}]}
+    else{const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);sheets=[];wb.eachSheet(ws=>{if(ws.state&&ws.state!=='visible')return;const rows=[];ws.eachRow({includeEmpty:true},(r,n)=>{const a=[];r.eachCell({includeEmpty:true},(c,k)=>{let v=c.text;if(v==null||typeof v==='object')v=c.value&&c.value.richText?c.value.richText.map(x=>x.text).join(''):String(c.value??'');a[k-1]=String(v)});rows[n-1]=Array.from(a,x=>x??'')});sheets.push({name:ws.name,rows:Array.from(rows,x=>x||[])})})}
+    impLoad(sheets);if(pick){const i=TIM.sheets.findIndex(x=>x.name===pick);if(i>0){TIM.si=i;impSheet()}}
+    toast('「'+meta.name+'」を読み込みました');
+  }catch(e){console.error(e);const t=String(e.message||e);
+    msg(/popup|cancel/i.test(t)?'許可の画面が閉じられました。もう一度押してください':/403|404/.test(t)?'このファイルを開く権限がないか、読み込みの設定がまだ有効になっていません（'+t+'）':'読み込めませんでした：'+t)}}
 function impLoad(sheets){sheets=sheets.map(s=>({name:s.name,rows:s.rows.map(r=>r.map(x=>String(x??'').trim()))})).filter(s=>s.rows.some(r=>r.some(x=>x)));if(!sheets.length){toast('表の中身が見つかりませんでした');return}
   TIM.sheets=sheets;TIM.si=0;impSheet();}
 function impSheet(){const S=TIM.sheets[TIM.si],R=S.rows;
