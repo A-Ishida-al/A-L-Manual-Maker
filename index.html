@@ -77,6 +77,14 @@ table.ed textarea{min-height:30px;height:30px;resize:vertical}
 .imgs{display:flex;flex-wrap:wrap;gap:10px}
 .imgs .im{position:relative;border:1px solid var(--line);border-radius:6px;padding:4px;background:#fafafa}
 .imgs img{max-height:120px;max-width:220px;display:block}
+.imgs.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:760px}
+.imgs.g2 .im{display:flex;flex-direction:column}
+.imgs.g2 img{max-width:none;max-height:none;width:100%;aspect-ratio:var(--ar);object-fit:contain;background:#eee}
+.imgs.g2 .slotBox{aspect-ratio:var(--ar)}
+.imops .mv{margin-left:auto;display:inline-flex;gap:2px}
+#cropModal .cropVp{position:relative;overflow:hidden;margin:0 auto;background:#222;cursor:move;touch-action:none;box-shadow:0 0 0 2px var(--red)}
+#cropModal .cropVp img{position:absolute;max-width:none;user-select:none;pointer-events:none}
+.cropBar{display:flex;gap:10px;align-items:center;margin-top:14px}.cropBar input[type=range]{flex:1}
 .imgs .im{cursor:grab}
 .imops{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
 .btnl{display:inline-flex;align-items:center;cursor:pointer;border:1px solid #c8c8c8;border-radius:5px;padding:2px 8px;font-size:11px;background:#fff;font-weight:500}
@@ -268,7 +276,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.26-35</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-36</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -430,6 +438,11 @@ body:not(.cloud) .cloudOnly{display:none!important}
   <div class="acts"><button onclick="closeModal('bugModal')">閉じる</button><button class="primary" onclick="saveBug()">報告ファイルを保存</button></div>
 </div></div>
 <div id="login" hidden><div class="lgp"><img class="appicon big" alt="" src=""><div class="brand" style="font-size:20px">A<b>&amp;</b>L 運営マニュアル Maker</div><p>会社のGoogleアカウント（@alonzo.jp）でログインしてください。</p><button id="bLogin" class="primary">Googleでログイン</button><p class="warn" id="loginMsg"></p></div></div>
+<div class="modal" id="cropModal"><div class="box" style="width:auto;max-width:94vw">
+  <h2>トリミング</h2><p class="hint" id="cropInfo" style="margin:0 0 4px"></p><p class="hint" style="margin:0 0 12px">画像をドラッグして位置を、下のつまみ（またはマウスホイール）で大きさを調整します。赤枠の中が書き出されます。</p>
+  <div class="cropVp"><img alt=""></div>
+  <div class="cropBar"><span class="hint">縮小</span><input type="range" id="cropZ" min="1" max="6" step="0.01" value="1" oninput="cropZoom(Number(this.value))"><span class="hint">拡大</span>
+  <button onclick="cropReset()">全体に戻す</button><button onclick="$('#cropModal').classList.remove('on');CROP=null">キャンセル</button><button class="primary" onclick="cropOk()">決定</button></div></div></div>
 <div class="modal" id="confModal"><div class="box">
   <h3>ほかの人が先に更新しました</h3>
   <p class="hint">このデータは、あなたが編集している間に別の人（または別の画面）で更新されました。どちらにしますか？</p>
@@ -31808,23 +31821,28 @@ MAX: 9026 };
       return out;
     }
     function imageRow(b) {
-      const imgs = (b.images || []).filter((x) => x && (x.dataUrl || x.slot));
+      let imgs = (b.images || []).filter((x) => x && (x.dataUrl || x.slot));
       if (!imgs.length) return [];
+      const RT = { '4:3': 4 / 3, '16:9': 16 / 9, '3:2': 3 / 2, '1:1': 1, '3:4': 3 / 4 }, rt = RT[b.ratio || (imgs.length >= 2 ? '4:3' : '')];
+      if (rt) imgs = imgs.map((x) => (x.slot && !x.dataUrl ? { ...x, w: rt * 900, h: 900 } : x));
       const totalW = Math.round(CW * Math.min(100, Math.max(10, Number(b.width) || 100)) / 100);
       const maxH = Math.round(CH * (b.tall ? 0.9 : 0.6));
       if (imgs.length === 1) {
         const p = image(imgs[0], totalW, maxH, b.align === 'left' ? AlignmentType.LEFT : AlignmentType.CENTER);
         return p ? [p, spacer(80)] : [];
       }
-      const gap = 120;
-      const each = Math.floor((totalW - gap * (imgs.length - 1)) / imgs.length);
-      const widths = []; const cells = [];
-      imgs.forEach((im, k) => {
-        if (k) { widths.push(gap); cells.push(cell([P([R('')])], { w: gap, ml: 0, mr: 0 })); }
-        widths.push(each);
-        cells.push(cell([image(im, each - 40, maxH) || P([R('')])], { w: each, ml: 0, mr: 0, valign: VerticalAlign.TOP }));
-      });
-      return [fixedTable(widths, [new TableRow({ children: cells })], { borders: allBorders(NONE), align: AlignmentType.CENTER }), spacer(80)];
+      // 横に2枚まで。3枚目からは次の段へ（同じ大きさのまま）
+      const gap = 120, each = Math.floor((totalW - gap) / 2), out = [];
+      for (let i = 0; i < imgs.length; i += 2) {
+        const row = imgs.slice(i, i + 2), widths = [], cells = [];
+        row.forEach((im, k) => {
+          if (k) { widths.push(gap); cells.push(cell([P([R('')])], { w: gap, ml: 0, mr: 0 })); }
+          widths.push(each);
+          cells.push(cell([image(im, each - 40, Math.round(maxH / 1.6)) || P([R('')])], { w: each, ml: 0, mr: 0, valign: VerticalAlign.TOP }));
+        });
+        out.push(fixedTable(widths, [new TableRow({ cantSplit: true, children: cells })], { borders: allBorders(NONE), align: row.length === 1 ? AlignmentType.LEFT : AlignmentType.CENTER }), spacer(100));
+      }
+      return out;
     }
     function renderImage(sec) {
       const d = sec.data || {};
@@ -31936,8 +31954,10 @@ MAX: 9026 };
       const imgs = (b.images || []).filter((x) => x && (x.w || x.slot)).map((x) => (x.w ? x : { ...x, w: 16, h: 9 }));
       if (!imgs.length) return 0;
       const totalW = CW * Math.min(100, Number(b.width) || 100) / 100;
-      const each = imgs.length === 1 ? totalW : totalW / imgs.length;
-      return Math.min(CH * 0.6, Math.max(...imgs.map((im) => each * im.h / im.w))) + 200;
+      if (imgs.length === 1) return Math.min(CH * 0.6, totalW * imgs[0].h / imgs[0].w) + 200;
+      const each = totalW / 2; let h = 0;
+      for (let i = 0; i < imgs.length; i += 2) h += Math.min(CH * 0.6 / 1.6, Math.max(...imgs.slice(i, i + 2).map((im) => each * im.h / im.w))) + 200;
+      return h;
     }
     function estimatePages(s) {
       const d = s.data || {};
@@ -35292,6 +35312,7 @@ function renderSecEd(){
   if($('#secAuto'))$('#secAuto').onchange=e=>{s.pages=e.target.checked?'auto':1;save();renderSecEd()};
   $$('#secEd textarea[data-b]').forEach(t=>{t.oninput=()=>{d.blocks[+t.dataset.b][t.dataset.f]=t.value;save()};t.onfocus=()=>lastTA=t});
   $$('#secEd textarea[data-f]').forEach(t=>{t.oninput=()=>{d[t.dataset.f]=t.value;save()};t.onfocus=()=>lastTA=t});
+  setTimeout(secCrops,0);
 }
 let lastTA=null;
 function textField(f,v,tall,bi){
@@ -35336,10 +35357,11 @@ function blocksEditor(d){
       <button class="ghost sm" onclick="blkMv(${bi},-1)">↑</button><button class="ghost sm" onclick="blkMv(${bi},1)">↓</button><button class="ghost sm" onclick="blkDel(${bi})">削除</button></h2>`;
     if(b.type==='text')h+=textField('body',b.body,false,bi);
     else if(b.type==='table')h+=tableEditor(b,bi);
-    else if(b.type==='image')h+=`<div class="imgs">${(b.images||[]).map((im,k)=>imgTile(im,'bimg',k,bi,`curSec().data.blocks[${bi}].images`)).join('')}</div>
-      <div class="row" style="margin-top:8px;align-items:center"><label class="f" style="flex:0 0 220px"><span>横幅（本文幅に対する％）</span><input type="number" min="10" max="100" step="5" value="${b.width||100}" oninput="curSec().data.blocks[${bi}].width=Number(this.value)||100;save()"></label>
-      <div class="hint">複数枚あると横に並びます。<br><input type="file" accept="image/*,application/pdf,.pdf" multiple onchange="blkAddImgs(${bi},this)"></div></div>
-      <div class="pasteZone" data-paste="blk" data-bi="${bi}"><b>スクリーンショットを貼り付け：</b>この枠をクリックして ⌘V／画像ファイルをここにドラッグ<button class="sm" onclick="event.stopPropagation();pasteFromClipboard('blk',${bi})">クリップボードから貼り付け</button></div>`;
+    else if(b.type==='image'){const rt=blkRatio(b);h+=`<div class="imgs g2" style="--ar:${rt==='orig'?'auto':RATIOS[rt].css}">${(b.images||[]).map((im,k)=>imgTile(im,'bimg',k,bi,`curSec().data.blocks[${bi}].images`)).join('')}</div>
+      <div class="row" style="margin-top:10px;align-items:flex-end;gap:12px"><label class="f" style="flex:0 0 230px"><span>画像の形（全部この形にそろえます）</span><select onchange="setBlkRatio(${bi},this.value)">${Object.entries(RATIOS).map(([k,v])=>`<option value="${k}" ${rt===k?'selected':''}>${v.l}</option>`).join('')}<option value="orig" ${rt==='orig'?'selected':''}>元の形のまま（そろえない）</option></select></label>
+      <label class="f" style="flex:0 0 190px"><span>横幅（本文幅に対する％）</span><input type="number" min="10" max="100" step="5" value="${b.width||100}" oninput="curSec().data.blocks[${bi}].width=Number(this.value)||100;save()"></label>
+      <div class="hint">横に2枚まで並び、3枚目からは次の段に並びます。「トリミング」で写す範囲を調整、ドラッグか ◀ ▶ で並べ替えできます。<br><input type="file" accept="image/*,application/pdf,.pdf" multiple onchange="blkAddImgs(${bi},this)"></div></div>`;}
+    if(b.type==='image')h+=`<div class="pasteZone" data-paste="blk" data-bi="${bi}"><b>スクリーンショットを貼り付け：</b>この枠をクリックして ⌘V／画像ファイルをここにドラッグ<button class="sm" onclick="event.stopPropagation();pasteFromClipboard('blk',${bi})">クリップボードから貼り付け</button></div>`;
     else if(b.type==='schedule')h+=`<label class="f"><span>入れる日程</span><select onchange="curSec().data.blocks[${bi}].dayId=this.value;save()">${days.map(x=>`<option value="${x.id}" ${x.id===b.dayId?'selected':''}>${esc(x.title)}</option>`).join('')}</select></label>
       <p class="hint">この位置に香盤表が1ページで入ります。内容は「香盤表」タブで編集します。</p><button class="sm" onclick="DAY=Math.max(0,P.schedule.days.findIndex(x=>x.id==='${b.dayId}'));TAB='sched';render()">香盤表を編集する →</button>`;
     h+=`</div>`;
@@ -35418,7 +35440,7 @@ function fileBase(kind){
 }
 async function exportManual(){
   if(!confirmTodos())return;
-  try{toast('Wordを作成しています…');const doc=OMGen.build(docx,P,'manual');const blob=await docx.Packer.toBlob(doc);download(blob,fileBase('運営マニュアル')+'.docx');toast('書き出しました（ライブラリに記憶しました）');recordHistory('運営マニュアル')}
+  try{await ensureAllCrops();toast('Wordを作成しています…');const doc=OMGen.build(docx,P,'manual');const blob=await docx.Packer.toBlob(doc);download(blob,fileBase('運営マニュアル')+'.docx');toast('書き出しました（ライブラリに記憶しました）');recordHistory('運営マニュアル')}
   catch(e){console.error(e);alert('書き出しに失敗しました：'+e.message)}
 }
 // sel: true＝全日程／日程IDの配列＝選んだ日程／false＝表示中の日
@@ -35442,7 +35464,7 @@ async function exportSchedule(sel){
 async function buildPptBlob(mode,opts){
   const host=document.createElement('div');host.style.cssText='position:fixed;left:-30000px;top:0;zoom:1';document.body.appendChild(host);
   try{
-    const doc=OMGen.build(OMHtml.D,P,mode,opts||{});
+    await ensureAllCrops();const doc=OMGen.build(OMHtml.D,P,mode,opts||{});
     try{await document.fonts.ready}catch(e){}
     OMHtml.render(doc,host);
     const pages=[...host.querySelectorAll('.om-page')];
@@ -35920,7 +35942,7 @@ async function showPreview(title,mode,opts,exportFn,landscape){
   $('#pvPageStyle').textContent=`@media print{@page{size:A4 ${landscape?'landscape':'portrait'};margin:0}}`;
   await new Promise(r=>setTimeout(r,30));
   try{
-    const doc=OMGen.build(OMHtml.D,P,mode,opts);
+    await ensureAllCrops();const doc=OMGen.build(OMHtml.D,P,mode,opts);
     try{await document.fonts.ready}catch(e){}
     const n=OMHtml.render(doc,box);
     $('#pvCount').textContent=`全 ${n} ページ`;
@@ -36119,10 +36141,58 @@ function imgTile(im,key,k,a,arr){
   if(im.slot&&!im.dataUrl)return `<div class="im slotTile" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''} data-slotarr="${arr}" data-k="${k}" title="クリックしてから ⌘V でスクリーンショットを貼り付け／画像ファイルをドラッグ">
     <div class="slotBox"><b>〔画像：${esc(im.slot===true?'差し替え':im.slot)}〕</b><small>クリックして ⌘V で貼り付け<br>または画像・PDFをここにドラッグ</small></div>
     <div class="imops"><label class="btnl">画像を選ぶ<input type="file" accept="image/*,application/pdf,.pdf" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像枠を削除しますか？')){${arr}.splice(${k},1);save();reImgs()}">枠を削除</button></div></div>`;
-  return `<div class="im" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''}><img src="${im.dataUrl}" draggable="false">${im.slot?`<div class="slotCap">${esc(im.slot===true?'':im.slot)}</div>`:''}<div class="imops"><label class="sm btnl">差し替え<input type="file" accept="image/*,application/pdf,.pdf" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像を削除しますか？')){${arr}.splice(${k},1);save();reImgs()}">削除</button></div></div>`}
+  return `<div class="im" draggable="true" data-dnd="${key}" data-i="${k}" data-axis="x" ${a!==''?`data-a="${a}"`:''}><img src="${im.dataUrl}" draggable="false">${im.slot?`<div class="slotCap">${esc(im.slot===true?'':im.slot)}</div>`:''}<div class="imops">${key==='bimg'?`<button class="sm" onclick="openCrop(${a},${k})">トリミング</button>`:''}<label class="sm btnl">差し替え<input type="file" accept="image/*,application/pdf,.pdf" hidden onchange="imgReplace(${arr},${k},this)"></label><button class="sm" onclick="if(confirm('この画像を削除しますか？')){${arr}.splice(${k},1);save();reImgs()}">削除</button>${key==='bimg'?`<span class="mv"><button class="ghost sm" ${k===0?'disabled':''} onclick="imgMv(${a},${k},-1)" title="前へ">◀</button><button class="ghost sm" onclick="imgMv(${a},${k},1)" title="後ろへ">▶</button></span>`:''}</div></div>`}
 function ovImgOK(r){return /集合/.test(r.label||'')||(r.images||[]).length>0}
 async function ovAddImgs(i,inp){const r=P.info.overview[i];r.images=r.images||[];for(const f of inp.files){try{r.images.push(...await readImages(f))}catch(e){toast('画像を読み込めませんでした')}}save();render();toast('画像を追加しました')}
 function reImgs(){if(TAB==='manual')renderSecEd();else render()}
+// ---------- 画像ブロック：形をそろえる・トリミング ----------
+const RATIOS={'4:3':{v:4/3,l:'横長（4：3）',css:'4/3'},'16:9':{v:16/9,l:'ワイド（16：9）',css:'16/9'},'3:2':{v:3/2,l:'写真（3：2）',css:'3/2'},'1:1':{v:1,l:'正方形（1：1）',css:'1/1'},'3:4':{v:3/4,l:'縦長（3：4）',css:'3/4'}};
+function blkRatio(b){return b.ratio||((b.images||[]).filter(x=>x&&(x.dataUrl||x.slot)).length>=2?'4:3':'orig')}
+function imgSrc(im){return im.src&&im.src.dataUrl?im.src:{dataUrl:im.dataUrl,w:im.w,h:im.h}}
+function loadImg(u){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u})}
+async function applyCrop(im,c,rt){
+  const src=imgSrc(im),el=await loadImg(src.dataUrl),W=el.naturalWidth,H=el.naturalHeight;
+  const sw=c.w*W,sh=c.h*H,k=Math.min(1,2000/Math.max(sw,sh)),cv=document.createElement('canvas');
+  cv.width=Math.max(1,Math.round(sw*k));cv.height=Math.max(1,Math.round(sh*k));
+  const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);g.drawImage(el,c.x*W,c.y*H,sw,sh,0,0,cv.width,cv.height);
+  const png=/^data:image\/png/.test(src.dataUrl)&&cv.width*cv.height<700000;
+  im.src={dataUrl:src.dataUrl,w:W,h:H};im.crop=c;im.ratio=rt;im.dataUrl=cv.toDataURL(png?'image/png':'image/jpeg',0.9);im.w=cv.width;im.h=cv.height;delete im._h;delete im._hl;
+}
+function centerCrop(W,H,r){const a=W/H;return a>r?{w:r/a,h:1,x:(1-r/a)/2,y:0}:{w:1,h:a/r,x:0,y:(1-a/r)/2}}
+async function ensureBlockCrops(b){
+  const rt=blkRatio(b);if(rt==='orig')return false;let ch=false;
+  for(const im of b.images||[]){if(!im||!im.dataUrl||im.ratio===rt)continue;const s0=imgSrc(im);let W=s0.w,H=s0.h;if(!W||!H){const el=await loadImg(s0.dataUrl);W=el.naturalWidth;H=el.naturalHeight}
+    try{await applyCrop(im,centerCrop(W,H,RATIOS[rt].v),rt);ch=true}catch(e){console.warn(e)}}
+  return ch;
+}
+async function ensureAllCrops(){let ch=false;for(const s of P.sections||[])for(const b of (s.data&&s.data.blocks)||[])if(b.type==='image'&&await ensureBlockCrops(b))ch=true;if(ch)save();return ch}
+let CROPBUSY=false;
+async function secCrops(){if(CROPBUSY)return;const s=curSec();if(!s||!s.data||!s.data.blocks)return;CROPBUSY=true;try{let ch=false;for(const b of s.data.blocks)if(b.type==='image'&&await ensureBlockCrops(b))ch=true;if(ch){save();if(TAB==='manual'&&curSec()===s)renderSecEd()}}finally{CROPBUSY=false}}
+async function setBlkRatio(bi,v){const b=curSec().data.blocks[bi];b.ratio=v;
+  if(v==='orig'){(b.images||[]).forEach(im=>{if(im&&im.src&&im.src.dataUrl){im.dataUrl=im.src.dataUrl;im.w=im.src.w;im.h=im.src.h;delete im.src;delete im.crop;delete im._h;delete im._hl}delete im.ratio})}
+  await ensureBlockCrops(b);save();renderSecEd()}
+function imgMv(bi,k,d){const a=curSec().data.blocks[bi].images;if(arrMove(a,k,k+d)){save();renderSecEd()}}
+// トリミング画面
+let CROP=null;
+async function openCrop(bi,k){
+  const b=curSec().data.blocks[bi],im=b.images[k];if(!im||!im.dataUrl)return;
+  const src=imgSrc(im),el=await loadImg(src.dataUrl),W=el.naturalWidth,H=el.naturalHeight;
+  let rt=blkRatio(b),r=rt==='orig'?(im.crop?im.crop.w*W/(im.crop.h*H):W/H):RATIOS[rt].v;
+  const VW0=Math.min(720,innerWidth-120),VH0=Math.min(440,innerHeight-260);let VW=VW0,VH=VW0/r;if(VH>VH0){VH=VH0;VW=VH*r}
+  const s0=Math.max(VW/W,VH/H);let c=im.crop&&(rt==='orig'||im.ratio===rt)?im.crop:centerCrop(W,H,r);
+  CROP={bi,k,W,H,VW,VH,s0,rt,z:Math.max(1,VW/(c.w*W)/s0),ox:0,oy:0};CROP.ox=-c.x*W*CROP.s0*CROP.z;CROP.oy=-c.y*H*CROP.s0*CROP.z;
+  const m=$('#cropModal');m.querySelector('.cropVp').style.cssText=`width:${VW}px;height:${VH}px`;m.querySelector('.cropVp img').src=src.dataUrl;
+  $('#cropZ').value=CROP.z;$('#cropInfo').textContent=rt==='orig'?'元の形のまま、写す範囲を調整します':'形：'+RATIOS[rt].l;cropDraw();m.classList.add('on');
+}
+function cropClamp(){const C=CROP,s=C.s0*C.z;C.ox=Math.min(0,Math.max(C.VW-C.W*s,C.ox));C.oy=Math.min(0,Math.max(C.VH-C.H*s,C.oy))}
+function cropDraw(){const C=CROP;cropClamp();const s=C.s0*C.z,i=$('#cropModal .cropVp img');i.style.width=C.W*s+'px';i.style.height=C.H*s+'px';i.style.left=C.ox+'px';i.style.top=C.oy+'px'}
+function cropZoom(z,cx,cy){const C=CROP;z=Math.max(1,Math.min(6,z));if(cx==null){cx=C.VW/2;cy=C.VH/2}const k=z/C.z;C.ox=cx-(cx-C.ox)*k;C.oy=cy-(cy-C.oy)*k;C.z=z;$('#cropZ').value=z;cropDraw()}
+async function cropOk(){const C=CROP,s=C.s0*C.z,c={x:-C.ox/(C.W*s),y:-C.oy/(C.H*s),w:C.VW/(C.W*s),h:C.VH/(C.H*s)};
+  const im=curSec().data.blocks[C.bi].images[C.k];await applyCrop(im,c,C.rt==='orig'?'orig':C.rt);$('#cropModal').classList.remove('on');CROP=null;save();renderSecEd();toast('トリミングしました')}
+function cropReset(){const C=CROP;C.z=1;const c=centerCrop(C.W,C.H,C.VW/C.VH);C.ox=-c.x*C.W*C.s0;C.oy=-c.y*C.H*C.s0;$('#cropZ').value=1;cropDraw()}
+document.addEventListener('pointerdown',e=>{const vp=e.target.closest&&e.target.closest('#cropModal .cropVp');if(!vp||!CROP)return;e.preventDefault();const sx=e.clientX,sy=e.clientY,ox=CROP.ox,oy=CROP.oy;
+  const mv=ev=>{CROP.ox=ox+ev.clientX-sx;CROP.oy=oy+ev.clientY-sy;cropDraw()},up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up)};addEventListener('pointermove',mv);addEventListener('pointerup',up)});
+document.addEventListener('wheel',e=>{const vp=e.target.closest&&e.target.closest('#cropModal .cropVp');if(!vp||!CROP)return;e.preventDefault();const r=vp.getBoundingClientRect();cropZoom(CROP.z*(e.deltaY<0?1.1:1/1.1),e.clientX-r.left,e.clientY-r.top)},{passive:false});
 async function imgReplace(arr,k,inp){const f=inp.files[0];if(!f)return;try{const old=arr[k]||{};const a=await readImages(f);if(!a.length)return;arr[k]=a[0];if(old.slot)arr[k].slot=old.slot;if(a.length>1)arr.splice(k+1,0,...a.slice(1));save();reImgs();toast('画像を差し替えました')}catch(e){toast('画像を読み込めませんでした')}}
 document.addEventListener('dragstart',e=>{
   const ch=e.target.closest&&e.target.closest('.ch');
