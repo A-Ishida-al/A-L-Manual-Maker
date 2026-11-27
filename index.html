@@ -307,7 +307,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver <span id="appVer">2026.11.27-52</span></small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver <span id="appVer">2026.11.27-53</span></small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -36075,20 +36075,27 @@ async function libRemove(id){const ix=await libIndex();const x=ix.find(e=>e.id==
 // =========================================================
 async function showPreview(title,mode,opts,exportFn,landscape,proj){
   const pv=$('#pv'),box=$('#pvPages');
-  $('#pvTitle').textContent=title;$('#pvCount').textContent='';box.style.zoom=1;
+  $('#pvTitle').textContent=title;$('#pvCount').textContent='';box.style.zoom=$('#pvZoom').value;
   box.innerHTML='<div class="pvload">ページを組んでいます…</div>';pv.classList.add('on');
   $('#pvExport').onclick=exportFn;$('#pvExport2').style.display=mode==='manual'?'':'none';$('#pvExport').textContent=mode==='schedule'?`${FMTNAME[P.schedule.exportFmt||'docx']}で書き出し`:'Wordで書き出し';$('.pvnote').textContent=mode==='schedule'&&(P.schedule.exportFmt||'docx')==='xlsx'?'印刷時のページ割り（Excelは同じ内容を日程ごとのシートで書き出し、A4・1ページ幅で印刷される設定です）':'印刷・Word書き出し時と同じページ割り（このPCに入っている書体で表示）';
   $('#pvPageStyle').textContent=`@media print{@page{size:A4 ${landscape?'landscape':'portrait'};margin:0}}`;
   await new Promise(r=>setTimeout(r,30));
   try{
     await ensureAllCrops();const doc=OMGen.build(OMHtml.D,proj||P,mode,opts);
-    try{await document.fonts.ready}catch(e){}
-    const n=OMHtml.render(doc,box);
+    try{const fs=[(P.fonts&&P.fonts.ja)||'',(P.fonts&&P.fonts.en)||''].filter(Boolean);await Promise.all(fs.map(f=>document.fonts.load(`10px "${f}"`,'あA1').catch(()=>{})));await document.fonts.ready}catch(e){}
+    let n=OMHtml.render(doc,box);
+    // 書体の読み込みで行の高さが後から変わり、表がページからはみ出すことがあるので、はみ出していたら組み直す
+    for(let k=0;k<2;k++){await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));try{await document.fonts.ready}catch(e){}
+      const over=[...box.querySelectorAll('.om-body')].some(bd=>{const l=bd.lastElementChild;return l&&bd.childElementCount>1||l&&l.tagName==='TABLE'?(l.offsetTop+l.offsetHeight>bd.clientHeight+1&&!(bd.childElementCount===1&&l.querySelectorAll('tr').length<=2)):false});
+      if(!over)break;n=OMHtml.render(OMGen.build(OMHtml.D,proj||P,mode,opts),box)}
+    LASTPV={proj:proj||P,mode,opts};
     $('#pvCount').textContent=`全 ${n} ページ`;
-    pvZoom();
   }catch(e){console.error(e);box.innerHTML=`<div class="pvload">プレビューを作れませんでした：${esc(e.message)}</div>`}
 }
-function pvZoom(){$('#pvPages').style.zoom=$('#pvZoom').value}
+// 表示倍率を変えたら、その倍率で組み直す（倍率によって文字の行の高さが変わり、ページからはみ出すのを防ぐ）
+let LASTPV=null;
+function pvZoom(){const box=$('#pvPages'),sc=box.parentElement&&box.parentElement.scrollTop,h=box.scrollHeight;box.style.zoom=$('#pvZoom').value;
+  if(LASTPV){try{OMHtml.render(OMGen.build(OMHtml.D,LASTPV.proj,LASTPV.mode,LASTPV.opts),box)}catch(e){console.error(e)}}}
 function closePreview(){$('#pv').classList.remove('on');$('#pvPages').innerHTML=''}
 function previewManual(){showPreview('運営マニュアル プレビュー','manual',{},()=>exportManual(),false)}
 function previewCurrent(){
