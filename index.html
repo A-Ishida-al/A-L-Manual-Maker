@@ -301,7 +301,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-42</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-43</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -31218,7 +31218,9 @@ MAX: 9026 };
         { type: 'table', columns: [{ name: '制作物', w: 3, align: 'left' }, { name: 'サイズ', w: 1.5, align: 'center' }, { name: '数量', w: 1, align: 'center' }, { name: '設置場所', w: 3, align: 'left' }], rows: [['〔受付サイン〕', '', '', ''], ['〔最後尾サイン〕', '', '', ''], ['〔撮影禁止サイン〕', '', '', '']], header: true }] }, { pages: 'auto' }),
       stdRules: () => S('text', 'ルール・リスク管理', 'スタッフ留意事項・服装', { body: TXT.stdRules }),
       stdEmergency: () => S('text', 'ルール・リスク管理', '緊急時対応', { body: TXT.stdEmergency }),
-      stdDisaster: () => S('text', 'ルール・リスク管理', '地震・災害時対応', { body: TXT.stdDisaster }),
+      stdDisaster: () => S('blocks', 'ルール・リスク管理', '地震・災害時対応', { blocks: [
+        { type: 'text', body: TXT.stdDisaster },
+        { type: 'image', images: [{ slot: '避難経路・非常口マップ', w: 16, h: 11 }], width: 100 }] }, { pages: 'auto' }),
       stdEquipment: () => S('table', '資料', '備品リスト', tbl(
         [['品目', 4, 'left'], ['個数', 1, 'center'], ['手配', 2, 'center'], ['備考', 3, 'left']],
         [['トランシーバー', '', 'A&L', ''], ['折り畳みテーブル', '', '', ''], ['バインダー・ボールペン', '', 'A&L', ''], ['受付リスト', '', 'A&L', '別紙・個人情報'], ['最後尾サイン', '', 'A&L', ''], ['養生テープ・各種テープ類', '', 'A&L', ''], ['救急セット', '', 'A&L', ''], ['ゴミ袋', '', 'A&L', ''], ['延長コード・マルチタップ', '', 'A&L', '']])),
@@ -35399,7 +35401,7 @@ function renderSecEd(){
   const d=s.data||(s.data={});
   h+=todoCard(s);
   if(s.kind==='overview')h+=`<div class="card"><h2>実施概要</h2><p class="hint">「■ 名称」などの項目は「基本情報」タブで編集します。下は項目の後に続く注意事項です。</p>${textField('body',d.body,true)}</div>`;
-  else if(s.kind==='text')h+=`<div class="card"><h2>本文</h2>${textField('body',d.body,true)}</div>`;
+  else if(s.kind==='text')h+=`<div class="card"><h2>本文</h2>${textField('body',d.body,true)}<div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button class="sm" onclick="toBlocks()">＋ 画像・表も入れられるようにする</button><span class="hint">本文はそのまま残り、下に画像（地図・図面など）や表を足せるようになります</span></div></div>`;
   else if(s.kind==='table')h+=tableEditor(d);
   else if(s.kind==='image')h+=`<div class="card"><h2>画像の上の文章（任意）</h2>${textField('before',d.before)}</div>
     <div class="card"><h2>画像（図面・地図など。ページ幅に合わせて自動縮小）</h2><div class="imgs">${(d.images||[]).map((im,k)=>imgTile(im,'simg',k,'',`curSec().data.images`)).join('')}</div>
@@ -35474,6 +35476,7 @@ function blocksEditor(d){
     <button class="sm" onclick="blkAdd('text')">＋ 文章</button><button class="sm" onclick="blkAdd('table')">＋ 表</button><button class="sm" onclick="blkAdd('image')">＋ 画像</button><button class="sm" onclick="blkAdd('org')">＋ 体制図</button>${days.length?`<button class="sm" onclick="blkAdd('schedule')">＋ 香盤表</button>`:''}</div>`;
   return h;
 }
+function toBlocks(img){const s=curSec();if(!s||s.kind!=='text')return;const body=(s.data&&s.data.body)||'';s.kind='blocks';s.data={blocks:[{type:'text',body},{type:'image',images:img?[{slot:img,w:16,h:11}]:[],width:100}]};s.pages='auto';save();render();toast('画像・表を足せる形にしました')}
 function blkAdd(t){const bl=curSec().data.blocks;bl.push(t==='text'?{type:'text',body:'■ 見出し\n・本文'}:t==='table'?{type:'table',header:true,columns:[{name:'項目',w:2,align:'left'},{name:'内容',w:5,align:'left'}],rows:[['','']]}:t==='image'?{type:'image',images:[],width:100}:t==='org'?OMTpl.orgDefault():{type:'schedule',dayId:(P.schedule.days[0]||{}).id});save();renderSecEd()}
 function blkMv(i,dir){const a=curSec().data.blocks,j=i+dir;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();renderSecEd()}
 function blkDel(i){if(!confirm('このブロックを削除しますか？'))return;curSec().data.blocks.splice(i,1);save();renderSecEd()}
@@ -35867,7 +35870,7 @@ async function applyImport(){if(P&&P.sections&&P.sections.length)await saveToHis
 // =========================================================
 // ライブラリ（書き出し履歴・テンプレート）
 // =========================================================
-function ensureMeta(p){p.meta=p.meta||{};(p.sections||[]).forEach(sc=>{const bl=sc.data&&sc.data.blocks;if(bl)bl.forEach((b,i)=>{if(b&&b.type==='image'&&(b.images||[]).length===1&&b.images[0].slot==='運営体制図（指揮系統）'&&!b.images[0].dataUrl)bl[i]=OMTpl.orgDefault()})});if(p.info){p.info.vars=p.info.vars||[];['開催日','会場住所','会場名','主催'].forEach(k=>{if(!p.info.vars.some(v=>v.key===k))p.info.vars.unshift({key:k,value:''})})}if(!p.meta.id)p.meta.id=OMTpl.uid()+OMTpl.uid();if(!p.meta.created)p.meta.created=new Date().toISOString();return p}
+function ensureMeta(p){p.meta=p.meta||{};(p.sections||[]).forEach(sc=>{if(sc.kind==='text'&&sc.title==='地震・災害時対応'){sc.kind='blocks';sc.data={blocks:[{type:'text',body:(sc.data&&sc.data.body)||''},{type:'image',images:[{slot:'避難経路・非常口マップ',w:16,h:11}],width:100}]};sc.pages='auto'}const bl=sc.data&&sc.data.blocks;if(bl)bl.forEach((b,i)=>{if(b&&b.type==='image'&&(b.images||[]).length===1&&b.images[0].slot==='運営体制図（指揮系統）'&&!b.images[0].dataUrl)bl[i]=OMTpl.orgDefault()})});if(p.info){p.info.vars=p.info.vars||[];['開催日','会場住所','会場名','主催'].forEach(k=>{if(!p.info.vars.some(v=>v.key===k))p.info.vars.unshift({key:k,value:''})})}if(!p.meta.id)p.meta.id=OMTpl.uid()+OMTpl.uid();if(!p.meta.created)p.meta.created=new Date().toISOString();return p}
 async function libIndex(){if(CLOUD)return CLIB.slice();try{const s=await idbGet('lib_index');return s?JSON.parse(s):[]}catch(e){return[]}}
 async function libSaveIndex(ix){await idbPut('lib_index',JSON.stringify(ix))}
 async function libPut(entry,project){
