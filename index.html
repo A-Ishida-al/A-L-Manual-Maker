@@ -91,6 +91,8 @@ table.ed textarea{min-height:30px;height:30px;resize:vertical}
 .ldiv{flex:0 0 auto;cursor:col-resize;position:relative;touch-action:none}.ldiv i,.lbot i{position:absolute;background:var(--red);opacity:0;border-radius:3px;transition:.15s}
 .ldiv i{left:50%;top:0;bottom:0;width:4px;margin-left:-2px}.ldiv:hover i,.lbot:hover i{opacity:.8}
 .lbot{position:absolute;left:0;right:0;bottom:-10px;height:10px;cursor:row-resize;touch-action:none;z-index:2}.lbot i{left:0;right:0;top:3px;height:4px}
+.cfList{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 14px;font-size:12.5px}.cfCol{background:#f6f6f6;border-radius:8px;padding:10px 12px;max-height:240px;overflow:auto}
+.cfCol ul{margin:6px 0 0;padding-left:18px}.cfCol li{margin:2px 0}.cfWarn{grid-column:1/-1;margin:0;color:var(--red);font-weight:600}
 .imgs.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:760px}
 .imgs.g2 .im{display:flex;flex-direction:column}
 .imgs.g2 img{max-width:none;max-height:none;width:100%;aspect-ratio:var(--ar);object-fit:contain;background:#eee}
@@ -290,7 +292,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-38</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-39</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -459,7 +461,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
   <button onclick="cropReset()">全体に戻す</button><button onclick="$('#cropModal').classList.remove('on');CROP=null">キャンセル</button><button class="primary" onclick="cropOk()">決定</button></div></div></div>
 <div class="modal" id="confModal"><div class="box">
   <h3>ほかの人が先に更新しました</h3>
-  <p class="hint">このデータは、あなたが編集している間に別の人（または別の画面）で更新されました。どちらにしますか？</p>
+  <p class="hint cfMsg"></p><div class="cfList"></div>
   <div class="acts"><button onclick="resolveConflict(true)">自分の変更を「コピー」として別に保存</button><button class="primary" onclick="resolveConflict(false)">最新の内容を読み込む（自分の変更は破棄）</button></div>
 </div></div>
 
@@ -34785,9 +34787,56 @@ function dupMine() {
 }
 
 // 同時に編集したとき
-function showConflict() {
+async function showConflict() {
   cloudStatus('ほかの人が先に更新しました', true);
-  $('#confModal').classList.add('on');
+  const id = curEntryId(), ent = CLIB.find((x) => x.id === id) || {}, m = $('#confModal');
+  const self = me && ent.updatedBy === me.email, who = self ? 'あなた（別の画面）' : (ent.updatedByName || ent.updatedBy ? (ent.updatedByName || ent.updatedBy) + 'さん' : 'ほかの人');
+  const when = ent.updatedAt && ent.updatedAt.toDate ? ent.updatedAt.toDate() : null;
+  const tm = when ? `${when.getMonth() + 1}/${when.getDate()} ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}` : '';
+  m.querySelector('h3').textContent = self ? 'あなたが別の画面で先に更新しました' : who + 'が先に更新しました';
+  m.querySelector('.cfMsg').textContent = `このデータは、あなたが編集している間に${who}が${tm ? tm + 'に' : ''}更新しました。どちらにしますか？`;
+  const L = m.querySelector('.cfList'); L.innerHTML = '<p class="hint">変更内容を確認しています…</p>';
+  m.classList.add('on');
+  try {
+    const base = CSAVE.json[id] ? JSON.parse(CSAVE.json[id]) : null, theirs = JSON.parse(bodyJson(await cloudGet(id))), mine = JSON.parse(bodyJson(P));
+    const li = (a) => (a.length ? '<ul>' + a.slice(0, 10).map((x) => `<li>${esc(x)}</li>`).join('') + (a.length > 10 ? `<li>ほか ${a.length - 10}件</li>` : '') + '</ul>' : '<p class="hint">（見つかりませんでした）</p>');
+    const t = base ? projDiff(base, theirs) : [], y = base ? projDiff(base, mine) : [];
+    const both = t.filter((x) => y.includes(x));
+    L.innerHTML = `<div class="cfCol"><b>${esc(who)}が変更したところ</b>${li(t)}</div><div class="cfCol"><b>あなたが変更したところ</b>${li(y)}</div>`
+      + (both.length ? `<p class="cfWarn">同じところを2人とも変更しています：${esc(both.slice(0, 5).join('、'))}</p>` : '');
+  } catch (e) { L.innerHTML = '<p class="hint">変更内容を取得できませんでした（' + esc(e.code || e.message || '') + '）</p>' }
+}
+// 2つの作業データの違いを「どのページのどの項目」の形で返す
+function projDiff(a, b) {
+  const out = [], J = (x) => JSON.stringify(x === undefined ? null : x), ne = (x, y) => J(x) !== J(y), push = (x) => { if (!out.includes(x)) out.push(x) };
+  const ia = a.info || {}, ib = b.info || {}, IL = { eventName: 'イベント名', headerText: 'ヘッダーの文字', coverLines: '表紙の文字', docDate: '発行日', version: '版（Ver.）', logo: 'ロゴ', cover: '表紙' };
+  Object.keys({ ...ia, ...ib }).forEach((k) => {
+    if (k === 'vars') { const va = {}, vb = {}; (ia.vars || []).forEach((v) => (va[v.key] = v.value)); (ib.vars || []).forEach((v) => (vb[v.key] = v.value)); Object.keys({ ...va, ...vb }).forEach((x) => { if (va[x] !== vb[x]) push('基本情報：' + x) }); }
+    else if (k === 'overview') { const n = Math.max((ia.overview || []).length, (ib.overview || []).length); for (let i = 0; i < n; i++) { const r1 = (ia.overview || [])[i], r2 = (ib.overview || [])[i]; if (ne(r1, r2)) push('実施概要：' + ((r2 || r1 || {}).label || (i + 1) + '行目')) } }
+    else if (ne(ia[k], ib[k])) push('基本情報：' + (IL[k] || k));
+  });
+  const da = (a.schedule && a.schedule.days) || [], db = (b.schedule && b.schedule.days) || [];
+  const dn = (d, i) => d.title || d.name || (i + 1) + '日目';
+  db.forEach((d, i) => { const o = da.find((x) => x.id === d.id); if (!o) { push('香盤表：「' + dn(d, i) + '」を追加'); return }
+    if (ne(o, d)) { const ra = o.rows || o.blocks || [], rb = d.rows || d.blocks || []; let c = 0; for (let k = 0; k < Math.max(ra.length, rb.length); k++) if (ne(ra[k], rb[k])) c++;
+      push('香盤表：「' + dn(d, i) + '」' + (c ? `（${c}か所）` : '')) } });
+  da.forEach((d, i) => { if (!db.some((x) => x.id === d.id)) push('香盤表：「' + dn(d, i) + '」を削除') });
+  if (a.schedule && b.schedule && ne({ ...a.schedule, days: 0 }, { ...b.schedule, days: 0 })) push('香盤表：列・設定');
+  const sa = a.sections || [], sb = b.sections || [], BL = { text: '文章', table: '表', image: '画像', schedule: '香盤表', org: '体制図' };
+  const bname = (bl, i) => { const f = bl.type === 'text' ? String(bl.body || '').split('\n').find((l) => l.trim()) : ''; return (BL[bl.type] || 'ブロック') + (f ? '「' + f.replace(/^[■●・\s]+/, '').slice(0, 14) + '」' : '') };
+  sb.forEach((s) => { const o = sa.find((x) => x.id === s.id), t = '「' + (s.title || 'ページ') + '」';
+    if (!o) { push('ページを追加：' + t); return }
+    if (o.title !== s.title) push('ページ名を変更：「' + o.title + '」→' + t);
+    if (o.enabled !== s.enabled) push(t + (s.enabled ? 'を書き出す設定に' : 'を書き出さない設定に'));
+    const ba = (o.data && o.data.blocks) || null, bb = (s.data && s.data.blocks) || null;
+    if (ba && bb) { const ids = new Set(); for (let i = 0; i < Math.max(ba.length, bb.length); i++) if (ne(ba[i], bb[i])) ids.add(bname(bb[i] || ba[i], i));
+      ids.forEach((x) => push(t + 'の' + x)); if (ne({ ...o.data, blocks: 0 }, { ...s.data, blocks: 0 })) push(t);
+    } else if (ne(o.data, s.data)) push(t);
+  });
+  sa.forEach((s) => { if (!sb.some((x) => x.id === s.id)) push('ページを削除：「' + (s.title || '') + '」') });
+  if (ne(sa.map((x) => x.id).filter((i) => sb.some((y) => y.id === i)), sb.map((x) => x.id).filter((i) => sa.some((y) => y.id === i)))) push('ページの順番');
+  Object.keys({ ...a, ...b }).forEach((k) => { if (!['info', 'schedule', 'sections', 'meta'].includes(k) && ne(a[k], b[k])) push({ fonts: '書体', rules: '書き方ルール' }[k] || '設定（' + k + '）') });
+  return out;
 }
 async function resolveConflict(keepMine) {
   $('#confModal').classList.remove('on');
