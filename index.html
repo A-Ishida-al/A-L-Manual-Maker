@@ -307,7 +307,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver <span id="appVer">2026.11.27-53</span></small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver <span id="appVer">2026.11.27-54</span></small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -35377,6 +35377,7 @@ function openSchedJSON(inp){const f=inp.files[0];if(!f)return;f.text().then(t=>{
 // =========================================================
 const KIND_LABEL={overview:'実施概要',text:'文章',table:'表',image:'画像',schedule:'香盤表',memo:'メモ',blocks:'ブロック'};
 function renderManual(){
+  const _li=$('.seclist .items'),_ls=_li?_li.scrollTop:0,_wy=scrollY;
   if(!SEL||!P.sections.find(s=>s.id===SEL))SEL=P.sections[0]&&P.sections[0].id;
   let list='',g=null;
   P.sections.forEach((s,i)=>{
@@ -35395,6 +35396,8 @@ function renderManual(){
   $('#addSel').onchange=e=>{const k=e.target.value;if(!k)return;const s=OMTpl.sectionCatalog()[k]();const idx=P.sections.findIndex(x=>x.id===SEL);
     if(idx>=0){s.group=P.sections[idx].group;P.sections.splice(idx+1,0,s)}else P.sections.push(s);SEL=s.id;save();renderManual()};
   renderSecEd();renderSecListBadges();
+  // 左の一覧のスクロール位置を保つ（押すたびに一番上へ戻らないように）
+  const li=$('.seclist .items');if(li)li.scrollTop=_ls;scrollTo(0,_wy);
 }
 function curSec(){return P.sections.find(s=>s.id===SEL)}
 function renderSecEd(){
