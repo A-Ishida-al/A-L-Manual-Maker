@@ -82,7 +82,10 @@ table.ed textarea{min-height:30px;height:30px;resize:vertical}
 .orgrow{display:flex;align-items:flex-start;gap:6px;padding:4px 0 4px calc(var(--d)*28px);border-bottom:1px dashed #eee}.orgrow:last-child{border-bottom:0}
 .orgrow .og{width:14px;color:#aaa;padding-top:6px}.orgrow .orole{flex:0 0 170px;font-weight:600}.orgrow .oname{flex:1;min-width:140px;resize:vertical;min-height:30px;font-size:12.5px}
 .orgrow .oops{display:flex;gap:3px;flex-wrap:wrap;flex:0 0 auto}.orgrow .oops .sm{padding:3px 7px}
-.orgpv{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;margin:0 auto}.orgpv img{width:100%;display:block}
+.orgpv{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;margin:0 auto}.orgpv img{width:100%;display:block;cursor:grab;touch-action:none;user-select:none}.orgcv{position:relative}
+.orghl{position:absolute;pointer-events:none;border:3px solid var(--red);border-radius:3px;box-sizing:border-box;background:rgba(200,30,30,.08)}
+.orghl.before{border-width:0 0 0 6px}.orghl.after{border-width:0 6px 0 0}.orghl.bad{border-color:#999;background:rgba(0,0,0,.08)}
+.orgghost{position:fixed;z-index:9999;pointer-events:none;background:#404040;color:#fff;font-size:12px;font-weight:600;padding:5px 10px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .lay{position:relative;max-width:100%}.lrow2{display:flex;position:relative}
 .lcell{position:relative;overflow:hidden;background:#eee;border-radius:2px;cursor:grab;flex:0 0 auto}.lcell>img{width:100%;height:100%;object-fit:cover;display:block}
 .lcell .slotBox{height:100%;box-sizing:border-box}
@@ -292,7 +295,7 @@ body:not(.cloud) .cloudOnly{display:none!important}
 <body>
 <header class="top">
   <img class="appicon" alt="" src="">
-  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-39</small></div>
+  <div class="brand">A<b>&amp;</b>L 運営マニュアル Maker<small>OPERATION MANUAL GENERATOR　ver 2026.11.27-40</small></div>
   <span class="fontbadge" id="fontBadge" onclick="openFontModal()"></span>
   <div class="spacer"></div>
   <button onclick="newProjectDlg()">新規</button>
@@ -36247,9 +36250,28 @@ function orgEditor(b,bi){
   return `<p class="hint" style="margin:0 0 8px">役職名と名前を入れてください。「＋ 下に枝分かれ」で部下を、「＋ 横に追加」で同じ階層の役職を足せます。← → で階層を上げ下げ、↑ ↓ で順番を変えられます。</p>
     <div class="orged">${rows||'<p class="hint">項目がありません</p>'}</div>
     <div style="margin:8px 0 12px"><button class="sm" onclick="orgOp(${bi},null,'root')">＋ 一番上に項目を追加</button></div>
-    <div class="orgpv" id="orgpvw${bi}" style="max-width:${Math.round(760*(b.width||100)/100)}px"><img id="orgpv${bi}" alt=""></div>
+    <p class="hint" style="margin:0 0 6px">図の箱をドラッグして、ほかの箱の<b>まん中</b>に落とすとその下に、<b>左右の端</b>に落とすとその横に移動します。</p>
+    <div class="orgpv" id="orgpvw${bi}" style="max-width:${Math.round(760*(b.width||100)/100)}px"><div class="orgcv"><img id="orgpv${bi}" alt="" draggable="false" onpointerdown="orgDragStart(event,${bi})"><div class="orghl" hidden></div></div></div>
     <div class="row" style="margin-top:10px">${sizeCtl(b,bi,'orgpvw'+bi)}</div>`;
 }
+function orgHit(b,img,cx,cy){const R=b._rects;if(!R)return null;const r=img.getBoundingClientRect(),x=(cx-r.left)*R.W/r.width,y=(cy-r.top)*R.H/r.height;
+  const n=R.list.find(q=>x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h);if(!n)return null;const f=(x-n.x)/n.w;return {n,zone:f<.22?'before':f>.78?'after':'child',k:r.width/R.W}}
+function orgDragStart(e,bi){
+  const b=curSec().data.blocks[bi],img=e.currentTarget,h0=orgHit(b,img,e.clientX,e.clientY);if(!h0)return;e.preventDefault();
+  const hl=img.parentElement.querySelector('.orghl'),sx=e.clientX,sy=e.clientY;let on=false,gh=null,tgt=null;
+  const mv=ev=>{if(!on){if(Math.hypot(ev.clientX-sx,ev.clientY-sy)<5)return;on=true;gh=document.createElement('div');gh.className='orgghost';gh.textContent=h0.n.role;document.body.appendChild(gh);img.style.cursor='grabbing'}
+    gh.style.left=ev.clientX+12+'px';gh.style.top=ev.clientY+12+'px';const h=orgHit(b,img,ev.clientX,ev.clientY);
+    const bad=h&&(h.n.id===h0.n.id||orgIsDesc(b,h0.n.id,h.n.id));tgt=h&&!bad?h:null;
+    if(!h){hl.hidden=true;gh.dataset.msg='';return}
+    const q=h.n,k=h.k;hl.hidden=false;hl.className='orghl '+(bad?'bad':h.zone);hl.style.cssText=`left:${q.x*k}px;top:${q.y*k}px;width:${q.w*k}px;height:${q.h*k}px`;
+    gh.textContent=h0.n.role+(bad?'（ここには移動できません）':h.zone==='child'?' → 「'+q.role+'」の下へ':h.zone==='before'?' → 「'+q.role+'」の左へ':' → 「'+q.role+'」の右へ')};
+  const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);hl.hidden=true;img.style.cursor='';if(gh)gh.remove();if(!on||!tgt)return;
+    const f=orgFind(b,h0.n.id);f.arr.splice(f.i,1);const t=orgFind(b,tgt.n.id);
+    if(tgt.zone==='child')(t.n.children=t.n.children||[]).push(f.n);else t.arr.splice(t.i+(tgt.zone==='after'?1:0),0,f.n);
+    save();renderSecEd();toast('「'+h0.n.role+'」を移動しました')};
+  addEventListener('pointermove',mv);addEventListener('pointerup',up);
+}
+function orgIsDesc(b,anc,id){const a=orgFind(b,anc);let r=false;if(a)orgEach(a.n.children,n=>{if(n.id===id)r=true});return r}
 function orgSet(bi,id,k,v){const b=curSec().data.blocks[bi],f=orgFind(b,id);if(!f)return;f.n[k]=v;save();clearTimeout(window._orgT);window._orgT=setTimeout(()=>orgPreview(bi),250)}
 function orgOp(bi,id,op){
   const b=curSec().data.blocks[bi];b.nodes=b.nodes||[];const N=()=>({id:OMTpl.uid(),role:'',name:'',children:[]});
@@ -36287,6 +36309,8 @@ function orgPng(b,editor){
     parts.forEach(p=>{const w=g.measureText(p).width;if(/^〔/.test(p)){g.fillStyle='#ffef00';g.fillRect(px,y-LH/2+1,w,LH-2)}g.fillStyle=/^〔/.test(p)?'#000':color;g.fillText(p,px,y);px+=w})};
   orgEach(ns,n=>{g.fillStyle='#fff';g.fillRect(n._x,n._y,n._w,n._h);g.fillStyle=HDR;g.fillRect(n._x,n._y,n._w,n._hh);g.lineWidth=1;g.strokeStyle='#222';g.strokeRect(n._x,n._y,n._w,n._h);
     n._r.forEach((l,j)=>txt(l,n._x+n._w/2,n._y+3+LH*j+LH/2,FB,'#fff'));n._n.forEach((l,j)=>txt(l,n._x+n._w/2,n._y+n._hh+5+LH*j+LH/2,FN,'#000'))});
+  const rects=[];orgEach(ns,n=>rects.push({id:n.id,role:T(n.role)||'（役職名なし）',x:n._x+PAD,y:n._y+PAD,w:n._w,h:n._h}));
+  Object.defineProperty(b,'_rects',{value:{W,H,list:rects},enumerable:false,writable:true,configurable:true});
   orgEach(ns,n=>{['_r','_n','_w','_h','_hh','_sw','_x','_y'].forEach(k=>delete n[k])});
   Object.defineProperty(b,'_png',{value:{dataUrl:cv.toDataURL('image/png'),w:Math.round(W),h:Math.round(H)},enumerable:false,writable:true,configurable:true});
 }
